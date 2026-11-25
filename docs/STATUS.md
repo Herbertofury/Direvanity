@@ -15,7 +15,14 @@ The project is under active implementation. This is a playable foundation toward
   80 kills, 43 allied survivors, and successful mid-battle save/load.
 - Final full-battle checksum after the fixed-point edge-case correction: `43701d5395d1a649`.
 - Native client passes current Bevy compilation checking; full binary and GPU smoke are underway.
-- Rust simulation compiled to WebAssembly; browser integration verification is underway.
+- Rust simulation compiled to WebAssembly; 21 lightweight Rust tests pass across the core,
+  simulation, WASM bridge and independent engine consumer.
+- Compiled WASM passes 510-tick, two-instance full-state equality, opaque 64-bit-safe save/load,
+  invalid-save atomicity, recruitment, readable errors and memory-growth integration checks.
+- 20 packaged browser control regressions pass against the real WASM with mocked DOM/Canvas.
+  This is structural/simulation evidence; it is not browser rendering proof.
+- The first public CI run passed simulation, full battle, replay, independent-engine and browser
+  compilation/ABI jobs. Native checks continue independently.
 - Spatial-query comparison: 20,000 units, 1,000 queries, five rounds. Same 14,054 returned pairs and
   result fingerprint `5e6ad574a282da93`. Median naive 27.4063 ms; indexed 4.2453 ms including build.
   Observed 6.456x speedup for this microbenchmark only.

@@ -22,18 +22,18 @@ if not args.skip_build:
                     'wasm32-unknown-unknown', '--profile', 'wasm-release'], cwd=root, env=env, check=True)
 wasm = target / 'wasm32-unknown-unknown/wasm-release/dread_wasm.wasm'
 data = wasm.read_bytes()
-html = (root/'web/index.template.html').read_text()
+html = (root/'web/index.template.html').read_text(encoding='utf-8')
 for key, value in {
-    '__DREAD_CSS__': (root/'web/style.css').read_text(),
-    '__DREAD_JS__': (root/'web/game.js').read_text(),
+    '__DREAD_CSS__': (root/'web/style.css').read_text(encoding='utf-8'),
+    '__DREAD_JS__': (root/'web/game.js').read_text(encoding='utf-8'),
     '__DREAD_WASM_BASE64__': base64.b64encode(data).decode(),
 }.items():
     html = html.replace(key, value)
 dist = root/'dist'
 dist.mkdir(exist_ok=True)
 output = dist/'Dreadmarch-playtest.html'
-output.write_text(html)
+output.write_text(html, encoding='utf-8')
 receipt = {'wasm_bytes':len(data), 'wasm_sha256':hashlib.sha256(data).hexdigest(),
            'html_bytes':output.stat().st_size,'html_sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
-(dist/'web-build.json').write_text(json.dumps(receipt, indent=2)+'\n')
+(dist/'web-build.json').write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
 print(json.dumps({'output':str(output),**receipt},indent=2))

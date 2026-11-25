@@ -158,9 +158,9 @@ canvas.addEventListener('pointermove',event=>{hover=pointAt(event);if(pan){offse
 canvas.addEventListener('pointerup',event=>{
   const p=pointAt(event);if(pan){pan=null;return;}if(!drag)return;
   const box=Math.hypot(p.x-drag.x,p.y-drag.y)>6;
-  let found=[];for(const u of world.units){if(u.team!=='player'||u.hp<=0)continue;const q=project(u.position.x/1000,u.position.z/1000,.5);if(box?q.x>=Math.min(drag.x,p.x)&&q.x<=Math.max(drag.x,p.x)&&q.y>=Math.min(drag.y,p.y)&&q.y<=Math.max(drag.y,p.y):Math.hypot(q.x-p.x,q.y-p.y)<Math.max(13,scale*.8))found.push(u.id);}
-  if(!box&&found.length>1)found=found.slice(0,1);
-  if(!drag.shift)selected.clear();for(const id of found){if(drag.shift&&!box&&selected.has(id))selected.delete(id);else selected.add(id);}drag=null;updateUI(true);
+  let found=[];for(const u of world.units){if(u.team!=='player'||u.hp<=0)continue;const q=project(u.position.x/1000,u.position.z/1000,.5);if(box?q.x>=Math.min(drag.x,p.x)&&q.x<=Math.max(drag.x,p.x)&&q.y>=Math.min(drag.y,p.y)&&q.y<=Math.max(drag.y,p.y):Math.hypot(q.x-p.x,q.y-p.y)<Math.max(13,scale*.8))found.push({id:u.id,distance:(q.x-p.x)**2+(q.y-p.y)**2});}
+  if(!box&&found.length>1)found=found.sort((a,b)=>a.distance-b.distance||a.id-b.id).slice(0,1);
+  if(!drag.shift)selected.clear();for(const {id} of found){if(drag.shift&&!box&&selected.has(id))selected.delete(id);else selected.add(id);}drag=null;updateUI(true);
 });
 canvas.addEventListener('pointercancel',()=>{drag=null;pan=null;});
 canvas.addEventListener('wheel',event=>{event.preventDefault();const p=pointAt(event),before=unproject(p.x,p.y);scale=Math.min(55,Math.max(4,scale*Math.exp(-event.deltaY*.001)));offsetX=p.x-(before.x-before.z)*scale;offsetY=p.y-(before.x+before.z)*scale*.5;fitted=false;},{passive:false});

@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 scripts/build_web.py
           node tests/web_abi.mjs
+          node tests/web_controls.mjs dist/Dreadmarch-playtest.html
       - name: Package native client
         shell: python
         run: |

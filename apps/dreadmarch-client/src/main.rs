@@ -791,6 +791,9 @@ fn keyboard_input(
                 Ok(world) => {
                     battle.world = world;
                     battle.all_army();
+                    battle.impacts.clear();
+                    battle.spell_effect = None;
+                    battle.order_marker = None;
                     battle.notice = "Save restored and validated.".into();
                 }
                 Err(e) => battle.notice = format!("Load rejected: {e:?}"),
@@ -840,12 +843,15 @@ fn pointer_input(
         battle.cast_mode = false;
         if let Some(target) = battle.cursor_world {
             let ids = battle.selected_ids();
+            let previous_failures = battle.command_failures;
             battle.command(SimCommand::Move {
                 units: ids,
                 target,
                 attack_move: keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight),
             });
-            battle.order_marker = Some((point3(target, 0.16), 1.3));
+            if battle.command_failures == previous_failures {
+                battle.order_marker = Some((point3(target, 0.16), 1.3));
+            }
         }
     }
     let (node, visibility) = &mut *rect;
