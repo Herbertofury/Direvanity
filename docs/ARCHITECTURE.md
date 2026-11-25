@@ -51,3 +51,21 @@ or population limit.
 Headless CPU timings and software-renderer smoke tests answer different questions. Record both,
 with seed, unit count, ticks, exact artifact, hardware/runtime, settings and checksums. A container
 software renderer cannot establish the user's RTX 4090 frame rate.
+
+## Campaign rules and content boundary
+
+`dread-sim::rpg` owns character validation, class lookup, original skills, progression, equipment,
+interactions and region memory. `data/gameplay/classes.json` is compiled into the simulation, so native
+and WASM clients cannot diverge by maintaining separate skill rules. Research catalogues are not
+compiled as playable abilities. They retain editions/provenance for design and coverage work.
+
+Campaign save version 2 stores appearance, learned skills, cooldowns, inventory/equipment, quest flags,
+visited regions, enemies and uncollected loot. Legacy skirmish version 1 remains loadable with its
+original deterministic behavior. Saves are validated before replacing the running world, including
+canonical region maps, traversal paths, identity uniqueness, prerequisites and point accounting.
+Fallible reward and encounter allocation is preflighted before a one-time quest/cache/travel change.
+
+The browser's creator, skill/inventory/journal/world panels and save slots are presentation. Character
+slots store exact Rust-produced UTF-8 plus a separate small metadata index. Import validates through
+Rust before restoration; 64-bit RNG state is never reserialized through JavaScript Number. Modal
+panels pause the simulation, contain keyboard focus and restore the prior pause state.

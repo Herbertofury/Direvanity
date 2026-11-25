@@ -20,18 +20,33 @@ The first RTS encounter remains an optional regression scenario. See [RPG_DIRECT
 - Every class completed both quests through the public WASM command interface, using actual combat,
   movement and interactions: 19 playthroughs and 52,530 simulated ticks. No stat/world edits were used.
 - Persistent killed enemies and uncollected loot; reward uniqueness; byte-exact full save roundtrips.
-- 15 simulation tests pass, including stored-region path/map corruption rejection. Targeted strict
+- 16 simulation tests pass, including stored-region path/map corruption rejection. Targeted strict
   Clippy passes. Core, WASM and independent engine tests passed earlier in this implementation wave.
-- 14 packaged campaign control checks pass against actual JS and embedded Rust WASM with structural
+- 16 packaged campaign control checks pass against actual JS and embedded Rust WASM with structural
   DOM/Canvas mocks. They cover creator, appearance, movement, panels, skills, independent save slots,
-  resume/import and hidden-tab pause. These mocks do not establish actual browser visual quality.
+  resume/import, hidden-tab pause, modal transition integrity and defeated-save recovery. These mocks do not establish actual browser visual quality.
 - Legacy WASM and all 20 legacy packaged control regressions still pass.
+
+## Additional observed verification
+
+- Native creator/campaign source compiled successfully; all four native regressions passed, including
+  creator button selection, independent appearance, real skill learning and portable campaign saves.
+- The live browser campaign was visually inspected and exercised through actual controls: customization,
+  Witch Doctor selection, movement, accepting the main quest, learning Spirit Harvest/Wicker Companion,
+  save, retraining and restoration. A second Paladin slot preserved the first character and its progress.
+- Initial cross-platform CI run `45653298115` passed all jobs on source `718fcf8`; Pages deployment
+  `45653476481` passed. The later review fixes and native integration require their own final release gate.
+- Source checkpoint `4978a61` publishes all three research datasets and atlases. Uploaded Git blob hashes
+  matched the complete local files. Divinity contains 1,684 typed records; other exact counts are in
+  their atlases. No missing-denominator or current-build uncertainty is silently marked complete.
+- Challenge fixes preflight item and encounter identity allocation, saturate currency rewards, validate
+  stored-region navigation, and reset/contain modals across load/creator transitions.
 
 ## Work underway before this checkpoint is a release
 
-- Native creator/campaign UI and current-source native runtime verification.
-- Full research atlas coverage reconciliation and source inventory publication.
-- Actual browser visual/input review of the new campaign.
+- Current-source native campaign/creator render verification and optimized release packages.
+- Final exact-source cross-platform CI after review fixes.
+- Final modal-focus browser regression after deployment of the hardened client.
 - Current-source cross-platform CI, release packaging and complete artifact readback.
 
 ## Production work remains

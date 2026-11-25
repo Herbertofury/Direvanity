@@ -1,47 +1,37 @@
-# v0.1.0-alpha.1 — First playable foundation
+# Dreadmarch v0.1.0-alpha.2 — The Ashen Concord
 
-Dreadmarch begins as an original dark-fantasy action RTS and reusable Rust engine, inspired by
-Diablo IV, Lost Ark, Path of Exile and Path of Exile II.
+The project now centers on a character-led single-player action RPG, with original Divine Divinity
+(2002), the Diablo series, Lost Ark, Path of Exile and Path of Exile II explicitly credited as inspirations.
 
-This prerelease contains the first geometric encounter: commander and squads, formation movement,
-combat, Soulfire, recruitment, three relics, five enemy waves, victory/defeat and validated saves.
-The native Bevy3D game and the offline browser playtest share the same authoritative Rust simulation.
+## Playable RPG foundation
 
-## Downloads
+- Character creator and all 19 researched class identities, with independent body/appearance choices.
+- 174 original prototype skill nodes, prerequisites, cooldown/focus costs, XP/levels and retraining.
+- Three connected regions, NPC dialogue, complete main and side quests, equipment and persistent loot.
+- Native Bevy campaign interface and offline browser campaign using the same Rust simulation.
+- Browser character slots, save/resume and portable JSON save export/import; native `--load PATH`.
+- The prior RTS skirmish remains available separately through `--skirmish` and the legacy HTML.
 
-- Windows: extract `Dreadmarch-windows-x64.zip` and run `dreadmarch.exe`. If `VCRUNTIME140.dll`
-  is missing, install the [official Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe).
-  See [Microsoft's runtime guide](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/).
-- Linux: extract `Dreadmarch-linux-x64.zip` and run `dreadmarch`. The executable requires glibc
-  2.35 or newer, X11 runtime libraries and a working graphics driver. If an archive tool drops
-  executable permissions, run `chmod +x dreadmarch` before launching.
-- Browser: download `Dreadmarch-playtest.html` and open it directly. Everything is embedded.
+## Research and original design
 
-The repository pins Rust 1.100.0, Bevy 0.20.1 and a locked dependency graph. Source is included by
-GitHub with the release. The generic engine can also be exercised with `cargo run -p engine-lab`.
+Complete versioned input-table inventories and readable atlases are included for Diablo, Divinity,
+Lost Ark and Path of Exile. Divinity contains 1,684 typed edition-specific records. Original Divine
+Divinity is reconciled as 88 ordinary +8 Divine tree skills, plus3 innate class specials. The atlases
+record exact scope, source versions, unknown denominators and unverified patch-specific data.
 
-## What was verified
+The playable 174-node catalogue is an original prototype. It does not claim that every source-game
+ability, rune, passive, modifier or skill behavior is implemented. Production class resources,
+projectiles, transformations, authored animations, original world art, extensive narrative content,
+advanced itemization and the full massive campaign remain planned work.
 
-Cross-platform CI passed verification and native Linux/Windows jobs, including strict Clippy,
-the three native client regressions and native builds. The optimized Windows x64 executable is built
-and packaged; Windows GPU runtime and windowed input remain open verification work.
+## Verification
 
-The portable optimized Linux build uses Ubuntu 24.04. Its exact downloaded CI artifact passed
-provider and package checksums, fresh extraction, executable-mode checks, and independent inspection
-of the glibc requirement. That extracted binary completed a real 120-frame offscreen Vulkan run on
-Debian 13, including movement, recruitment, Soulfire, save/load and a visually inspected screenshot
-with the complete HUD. Its final simulation checksum was `4d08544a95f6c631`.
+Every class completes both prologue quests through actual public Rust/WASM commands. Tests cover
+persistent enemies/loot, one-time rewards, prerequisites, equipment, exact saves, invalid-save atomicity,
+allocation exhaustion, currency overflow and modal/save-screen transitions. The live browser creator,
+quest interaction, skills, retraining, save restoration and independent character slots were exercised.
 
-Rendering was verified using software Vulkan. This establishes functional rendering and gameplay
-correctness, not target-hardware performance. [STATUS.md](STATUS.md#native-release-evidence) records
-the exact build revisions, artifact hashes and remaining verification boundaries.
-
-## Next implementation milestone
-
-**M1 combat and navigation** adds unit footprints and avoidance, congestion tests, data-driven
-abilities and status effects, authored combat animation, and a boss encounter. Windows hardware
-capture and frame-time instrumentation accompany that vertical slice.
-
-This is an early playable engineering foundation, not finished AAAA production. Art, animation,
-audio, deep loot/build systems, campaign, multiplayer, crowd avoidance and visual authoring remain
-explicit milestones. Read docs/STATUS.md for verified results and docs/VISION.md for the quality bar.
+See `docs/STATUS.md` and the included build/runtime receipts for the exact source revisions and limits.
+Native software-Vulkan captures establish functional rendering, not target gaming-GPU performance.
+Windows packages require the normal Microsoft Visual C++ x64 runtime; Windows GPU/window behavior
+must still be verified on real Windows hardware.

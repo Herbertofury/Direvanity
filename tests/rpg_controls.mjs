@@ -27,6 +27,7 @@ class Element {
   addEventListener(type,fn){const a=this.listeners.get(type)||[];a.push(fn);this.listeners.set(type,a);}
   fire(type,extra={}){const e={target:this,preventDefault(){},...extra};this['on'+type]?.(e);for(const fn of this.listeners.get(type)||[])fn(e);}
   click(){if(!this.disabled)this.fire('click');}
+  focus(){document.activeElement=this;}
   getContext(){return graphics;}
   getBoundingClientRect(){return{left:0,top:0,width:1440,height:900};}
 }
@@ -59,8 +60,12 @@ key('i');assert.equal(el('modal-title').textContent,'What you carry');key('Escap
 el('save').click();const first=raw(),firstKey=el('saved-characters').value;assert.equal(storage.get('dreadmarch-character:'+firstKey),first);cases.push('opaque UTF-8 save storage');
 el('new-character').click();assert.equal(el('creator').classList.contains('hidden'),false);el('classes').children.find(b=>b.dataset.class==='paladin').click();el('character-name').value='Oren';el('begin').click();assert.equal(state().campaign.character.class_id,'paladin');assert.equal(el('saved-characters').children.length,2);assert.equal(storage.get('dreadmarch-character:'+firstKey),first);cases.push('independent character slots preserve previous character');
 el('new-character').click();el('saved-characters').value=firstKey;el('continue').click();assert.equal(raw(),first);cases.push('choose and continue an earlier character');
+el('skills').click();assert.equal(el('hud').inert,true);el('load').click();assert.equal(el('modal').classList.contains('hidden'),true);assert.equal(el('hud').inert,false);el('skills').click();el('new-character').click();assert.equal(el('modal').classList.contains('hidden'),true);assert.equal(el('creator').inert,false);el('saved-characters').value=firstKey;el('continue').click();cases.push('load and creator transitions clear modal, inert state and stale pause');
 document.hidden=true;for(const fn of listeners.get('visibilitychange')||[])fn();const hiddenTick=state().tick;frame(10000);assert.equal(state().tick,hiddenTick);document.hidden=false;for(const fn of listeners.get('visibilitychange')||[])fn();assert.equal(inspect('__rpgTest.paused()'),true);cases.push('hidden tabs pause without dropping simulation ticks');
 el('new-character').click();const imported=first.replace('"name":"Mara"','"name":"Imported Mara"');el('import-file').fire('change',{target:{files:[{text:async()=>imported}]}});await new Promise(r=>setTimeout(r,0));assert.equal(state().campaign.character.name,'Imported Mara');assert.equal(el('saved-characters').children.length,3);cases.push('import complete character into a new slot');
+const defeated=JSON.parse(first);defeated.status='defeat';defeated.units=[];
+el('import-file').fire('change',{target:{files:[{text:async()=>JSON.stringify(defeated)}]}});await new Promise(r=>setTimeout(r,0));
+assert.equal(el('modal-title').textContent,'The road falls silent');el('defeat-new').click();assert.equal(inspect('__rpgTest.playing()'),false);assert.equal(el('modal').classList.contains('hidden'),true);assert.equal(el('creator').inert,false);cases.push('defeated saves always offer a working return to creator');
 assert.ok(calls>100);cases.push('procedural portrait and region renderer execute');
 const receipt={artifact:process.argv[2]||'dist/Dreadmarch-campaign.html',verified:cases,case_count:cases.length,canvas_calls:calls,limitation:'DOM/Canvas structural mocks; real browser visual QA is separate.'};
 fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/rpg-controls-proof.json',JSON.stringify(receipt,null,2)+'\n');console.log(JSON.stringify(receipt,null,2));

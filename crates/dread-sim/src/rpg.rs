@@ -695,8 +695,19 @@ impl World {
             return self.travel(&region);
         }
         let enemies_alive = self.units.iter().any(|u| u.team == Team::Enemy);
-        let c = self.campaign.as_mut().expect("campaign");
         let key = format!("{}:{target}", c.region);
+        let creates_item = match target {
+            "elder" => c.main_quest == 2,
+            "merchant" => {
+                c.flags.contains("satchel_found") && !c.flags.contains("satchel_returned")
+            }
+            "chest" => !c.flags.contains(&key),
+            _ => false,
+        };
+        if creates_item && c.next_item_id == u32::MAX {
+            return Err(err("Item identity space exhausted."));
+        }
+        let c = self.campaign.as_mut().expect("campaign");
         match target {
             "elder" => {
                 if c.main_quest == 0 {
@@ -706,7 +717,7 @@ impl World {
                 } else if c.main_quest == 2 {
                     c.main_quest = 3;
                     c.gain_experience(200);
-                    self.economy.essence += 120;
+                    self.economy.essence = self.economy.essence.saturating_add(120);
                     let item = c.new_item("Concord Keeper's Seal", "charm", 30, "legendary")?;
                     c.inventory.push(item);
                     c.dialogue = "Maelin: You brought back more than a relic. You brought back a reason to keep the lamps burning. Beyond these roads, the other concords are breaking. Your journey has only begun. Prologue complete.".into();
@@ -718,7 +729,7 @@ impl World {
                 if c.flags.contains("satchel_found") && !c.flags.contains("satchel_returned") {
                     c.flags.insert("satchel_returned".into());
                     c.gain_experience(90);
-                    self.economy.essence += 45;
+                    self.economy.essence = self.economy.essence.saturating_add(45);
                     let item = c.new_item("Iven's Wayfinder", "charm", 18, "rare")?;
                     c.inventory.push(item);
                     c.dialogue = "Iven: My satchel! Take this wayfinder. It has seen more roads than either of us. Side quest complete.".into();
@@ -771,7 +782,7 @@ impl World {
                 }
                 let item = c.new_item("Wayfarer's Tempered Blade", "weapon", 16, "magic")?;
                 c.inventory.push(item);
-                self.economy.essence += 20;
+                self.economy.essence = self.economy.essence.saturating_add(20);
                 c.dialogue = "You recover a tempered weapon and a handful of old coin. Open Inventory to equip your find.".into();
             }
             "shrine" => {
@@ -806,6 +817,31 @@ impl World {
         if origin.distance_squared(gate.position) > 3_500u64.pow(2) {
             return Err(err("Reach the region's marked exit before travelling."));
         }
+        // Validate the entire transition before changing region, identity counters or entities.
+        let encounter: &[(i32, i32, bool)] = if !c.visited.contains(region) {
+            match region {
+                "hollow_moor" => &[
+                    (19_500, 17_500, false),
+                    (21_500, 19_500, false),
+                    (27_500, 17_500, false),
+                    (30_500, 19_500, false),
+                    (37_500, 18_500, false),
+                    (40_500, 20_500, true),
+                ],
+                "forgotten_sanctum" => &[
+                    (19_500, 18_500, false),
+                    (24_500, 17_500, false),
+                    (32_500, 20_500, false),
+                    (38_500, 18_500, true),
+                ],
+                _ => &[],
+            }
+        } else {
+            &[]
+        };
+        self.next_id
+            .checked_add(encounter.len() as u32)
+            .ok_or(CommandError::IdExhausted)?;
         let previous = c.region.clone();
         let enemies = self
             .units
@@ -822,7 +858,7 @@ impl World {
             },
         );
         let memory = c.regions.remove(region);
-        let first_visit = c.visited.insert(region.into());
+        c.visited.insert(region.into());
         c.region = region.into();
         c.effects.clear();
         c.dialogue = format!("Entered {}.", region_name(region));
@@ -849,25 +885,8 @@ impl World {
         if let Some(memory) = memory {
             self.units.extend(memory.enemies);
             self.campaign.as_mut().expect("campaign").ground_loot = memory.loot;
-        } else if first_visit {
-            let positions = match region {
-                "hollow_moor" => vec![
-                    (19_500, 17_500, false),
-                    (21_500, 19_500, false),
-                    (27_500, 17_500, false),
-                    (30_500, 19_500, false),
-                    (37_500, 18_500, false),
-                    (40_500, 20_500, true),
-                ],
-                "forgotten_sanctum" => vec![
-                    (19_500, 18_500, false),
-                    (24_500, 17_500, false),
-                    (32_500, 20_500, false),
-                    (38_500, 18_500, true),
-                ],
-                _ => vec![],
-            };
-            for (x, z, boss) in positions {
+        } else {
+            for &(x, z, boss) in encounter {
                 self.spawn(
                     if boss {
                         UnitKind::Brute
@@ -903,6 +922,9 @@ impl World {
             || self.wave != 0
             || self.wave_ticks_remaining != 0
             || self.status == MatchStatus::Victory
+            || c.visited
+                .iter()
+                .any(|region| region != &c.region && !c.regions.contains_key(region))
             || c.next_item_id == 0
             || c.visited
                 .iter()
@@ -1041,6 +1063,38 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn allocation_exhaustion_does_not_consume_rewards_or_partially_travel() {
+        for (target, position) in [
+            ("chest", Point::new(7_500, 25_500)),
+            ("elder", Point::new(11_500, 18_500)),
+            ("merchant", Point::new(12_500, 23_500)),
+        ] {
+            let mut world = make("paladin");
+            move_to(&mut world, position);
+            let c = world.campaign.as_mut().unwrap();
+            c.main_quest = 2;
+            c.flags.insert("satchel_found".into());
+            c.next_item_id = u32::MAX;
+            world.validate().unwrap();
+            let before = world.save_json().unwrap();
+            assert!(world.interact(target).is_err());
+            assert_eq!(world.save_json().unwrap(), before);
+            world.campaign.as_mut().unwrap().next_item_id = 1;
+            world.economy.essence = u32::MAX;
+            world.interact(target).unwrap();
+            assert_eq!(world.economy.essence, u32::MAX);
+        }
+        for next in [u32::MAX, u32::MAX - 2] {
+            let mut world = make("paladin");
+            move_to(&mut world, Point::new(43_500, 18_500));
+            world.next_id = next;
+            world.validate().unwrap();
+            let before = world.save_json().unwrap();
+            assert!(world.travel("hollow_moor").is_err());
+            assert_eq!(world.save_json().unwrap(), before);
+        }
+    }
     #[test]
     fn stored_regions_cannot_smuggle_invalid_navigation_into_a_save() {
         let mut world = make("paladin");

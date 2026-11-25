@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Deterministic action-RTS simulation for Dreadmarch"
+description = "Deterministic single-player RPG and skirmish simulation for Dreadmarch"
 
 [dependencies]
 dread-core.workspace = true

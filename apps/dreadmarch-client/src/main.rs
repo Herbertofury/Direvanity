@@ -3,7 +3,7 @@
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
     camera::{RenderTarget, ScalingMode, ShadowLodOrigin},
-    input::mouse::MouseWheel,
+    input::{ButtonState, keyboard::KeyboardInput, mouse::MouseWheel},
     picking::hover::Hovered,
     post_process::bloom::Bloom,
     prelude::*,
@@ -16,6 +16,7 @@ use bevy::{
     window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
 };
+use dread_sim::rpg::{self, CharacterCreation};
 use dread_sim::{
     ABILITY_RADIUS, CAPTURE_RADIUS, CAPTURE_TICKS, Command as SimCommand, MatchStatus, Point,
     SimEvent, TICK_HZ, TOTAL_WAVES, Team, UnitKind, World as SimWorld,
@@ -46,6 +47,13 @@ struct Battle {
     living_ids: HashSet<u32>,
     command_count: u32,
     command_failures: u32,
+    creator: Option<CharacterCreation>,
+    editing_name: bool,
+    panel: CampaignPanel,
+    skill_index: usize,
+    item_index: usize,
+    scene_generation: u64,
+    ui_keyboard_consumed: bool,
 }
 struct Impact {
     position: Vec3,
@@ -77,21 +85,151 @@ impl Default for Battle {
             living_ids: HashSet::new(),
             command_count: 0,
             command_failures: 0,
+            creator: None,
+            editing_name: false,
+            panel: CampaignPanel::Closed,
+            skill_index: 0,
+            item_index: 0,
+            scene_generation: 1,
+            ui_keyboard_consumed: false,
         }
     }
 }
 impl Battle {
+    fn campaign(creation: CharacterCreation, show_creator: bool) -> Self {
+        let world = SimWorld::new_campaign(SEED, creation.clone())
+            .expect("initial campaign character must be valid");
+        let mut battle = Self::default();
+        battle.replace_world(world);
+        if show_creator {
+            battle.creator = Some(creation);
+            battle.paused = true;
+        }
+        battle
+    }
+    fn replace_world(&mut self, world: SimWorld) {
+        self.world = world;
+        self.all_army();
+        self.creator = None;
+        self.editing_name = false;
+        self.panel = CampaignPanel::Closed;
+        self.skill_index = 0;
+        self.item_index = 0;
+        self.paused = false;
+        self.cast_mode = false;
+        self.drag_start = None;
+        self.impacts.clear();
+        self.spell_effect = None;
+        self.order_marker = None;
+        self.scene_generation = self.scene_generation.wrapping_add(1);
+        self.notice = "Journey ready. Speak with Archivist Maelin.".into();
+        self.notice_ticks = 180;
+    }
+    fn restart(&mut self) {
+        let world = if let Some(c) = &self.world.campaign {
+            SimWorld::new_campaign(SEED, c.character.clone()).expect("validated character")
+        } else {
+            SimWorld::new(SEED)
+        };
+        self.replace_world(world);
+    }
+    fn begin_journey(&mut self) {
+        let Some(draft) = self.creator.clone() else {
+            return;
+        };
+        match SimWorld::new_campaign(SEED, draft) {
+            Ok(world) => self.replace_world(world),
+            Err(error) => {
+                self.notice = format!("{error:?}");
+                self.notice_ticks = 180;
+            }
+        }
+    }
+    fn selected_skill(&self) -> Option<&rpg::SkillDefinition> {
+        self.world
+            .campaign
+            .as_ref()
+            .and_then(|c| c.class().skills.get(self.skill_index))
+    }
+    fn cast_selected(&mut self, target: Point) {
+        if self.world.campaign.is_some() {
+            if let Some(skill) = self.selected_skill() {
+                let skill = skill.id.clone();
+                self.command(SimCommand::CastSkill { skill, target });
+            }
+        } else {
+            self.command(SimCommand::Cast { target });
+        }
+    }
+    fn learn_selected(&mut self) {
+        if let Some(skill) = self.selected_skill() {
+            let skill = skill.id.clone();
+            self.command(SimCommand::LearnSkill { skill });
+        }
+    }
+    fn equip_selected(&mut self) {
+        if let Some(item) = self
+            .world
+            .campaign
+            .as_ref()
+            .and_then(|c| c.inventory.get(self.item_index))
+        {
+            let item = item.id;
+            self.command(SimCommand::Equip { item });
+        }
+    }
+    fn nearest_interaction(&self) -> Option<(String, String, u64)> {
+        let c = self.world.campaign.as_ref()?;
+        let hero = self.world.commander()?;
+        rpg::points_of_interest(&c.region)
+            .into_iter()
+            .map(|p| (p.id, p.name, hero.position.distance_squared(p.position)))
+            .chain(c.ground_loot.iter().map(|l| {
+                (
+                    format!("loot:{}", l.item.id),
+                    l.item.name.clone(),
+                    hero.position.distance_squared(l.position),
+                )
+            }))
+            .min_by_key(|(_, _, distance)| *distance)
+    }
+    fn interact_nearest(&mut self) {
+        if let Some((target, _, _)) = self.nearest_interaction() {
+            self.command(SimCommand::Interact { target });
+        }
+    }
+    fn cycle_selection(&mut self, forward: bool) {
+        if let Some(c) = &self.world.campaign {
+            let (index, count) = if self.panel == CampaignPanel::Inventory {
+                (&mut self.item_index, c.inventory.len())
+            } else {
+                (&mut self.skill_index, c.class().skills.len())
+            };
+            if count > 0 {
+                *index = (*index + if forward { 1 } else { count - 1 }) % count;
+            }
+        }
+    }
     fn command(&mut self, command: SimCommand) {
         self.command_count += 1;
+        let previous_region = self.world.campaign.as_ref().map(|c| c.region.clone());
         let cast = match &command {
-            SimCommand::Cast { target } => Some(*target),
+            SimCommand::Cast { target } | SimCommand::CastSkill { target, .. } => Some(*target),
             _ => None,
         };
         match self.world.apply(command) {
             Ok(()) => {
+                if previous_region != self.world.campaign.as_ref().map(|c| c.region.clone()) {
+                    self.scene_generation = self.scene_generation.wrapping_add(1);
+                }
                 if let Some(target) = cast {
                     self.spell_effect = Some((point3(target, 0.14), 0.85));
-                    self.notice = "Soulfire unleashed.".into();
+                    self.notice = if self.world.campaign.is_some() {
+                        "Class skill unleashed."
+                    } else {
+                        "Soulfire unleashed."
+                    }
+                    .into();
                     self.notice_ticks = 75;
                 }
             }
@@ -152,9 +290,13 @@ impl Battle {
 #[derive(Resource, Default)]
 struct Cli {
     smoke: bool,
+    campaign_smoke: bool,
+    campaign_stage: u8,
+    save_path: String,
     screenshot: Option<String>,
     frames: u32,
     captured: bool,
+    creator_captured: bool,
     hud_validated: bool,
 }
 #[derive(Resource)]
@@ -188,6 +330,10 @@ struct VisualAssets {
     ember: Handle<StandardMaterial>,
     cloth: Handle<StandardMaterial>,
     bone: Handle<StandardMaterial>,
+    stone: Handle<StandardMaterial>,
+    basalt: Handle<StandardMaterial>,
+    moss: Handle<StandardMaterial>,
+    pale: Handle<StandardMaterial>,
 }
 #[derive(Component)]
 struct MainCamera;
@@ -199,6 +345,7 @@ struct UnitVisual {
     previous: Vec3,
     current: Vec3,
     tick: u64,
+    appearance: Option<CharacterCreation>,
 }
 #[derive(Default)]
 struct RenderScratch {
@@ -216,7 +363,26 @@ struct HelpText;
 type HelpFilter = (With<HelpText>, Without<Hud>, Without<StatusLine>);
 #[derive(Component)]
 struct DragRect;
-#[derive(Component, Clone, Copy)]
+#[derive(Component)]
+struct RegionGeometry;
+#[derive(Component)]
+struct PoiLabel(Point);
+#[derive(Component)]
+struct CampaignControls;
+#[derive(Component)]
+struct SkirmishControls;
+#[derive(Component)]
+struct CreatorPanel;
+#[derive(Component)]
+struct CreatorSummary;
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+enum CampaignPanel {
+    #[default]
+    Closed,
+    Skills,
+    Inventory,
+}
+#[derive(Component, Clone, Copy, PartialEq, Eq)]
 enum Action {
     Vanguard,
     Ranger,
@@ -226,14 +392,58 @@ enum Action {
     Pause,
     Restart,
     Help,
+    Skills,
+    Inventory,
+    Previous,
+    Next,
+    Learn,
+    Equip,
+    Interact,
+    Respec,
+    Creator,
+    ChooseClass(usize),
+    EditName,
+    Body,
+    Skin,
+    Hair,
+    HairStyle,
+    Eyes,
+    Accent,
+    Stature,
+    Begin,
+    CloseCreator,
 }
 
 fn main() {
     let mut cli = Cli::default();
+    let mut skirmish = false;
+    let mut creation = CharacterCreation::default();
+    let mut load_path = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--smoke-test" => cli.smoke = true,
+            "--smoke-test" => {
+                cli.smoke = true;
+                skirmish = true;
+            }
+            "--campaign-smoke" => {
+                cli.smoke = true;
+                cli.campaign_smoke = true;
+            }
+            "--skirmish" => skirmish = true,
+            "--campaign" => skirmish = false,
+            "--load" | "--save" | "--class" | "--name" => {
+                let value = args.next().unwrap_or_else(|| {
+                    eprintln!("{arg} requires a value");
+                    std::process::exit(2);
+                });
+                match arg.as_str() {
+                    "--load" => load_path = Some(value),
+                    "--save" => cli.save_path = value,
+                    "--class" => creation.class_id = value,
+                    _ => creation.name = value,
+                }
+            }
             "--screenshot" => {
                 cli.screenshot = args.next();
                 if cli.screenshot.is_none() {
@@ -243,7 +453,7 @@ fn main() {
             }
             "--help" | "-h" => {
                 println!(
-                    "Dreadmarch native playtest\n  --smoke-test          exercise real rendering + game commands, then exit\n  --screenshot PATH     capture a PNG after scene warmup\nControls: left select/drag, right move, Shift+right attack-move; WASD pan, Q/E orbit, wheel zoom; Space spell, Tab army, C commander; 1/2 recruit; P pause; R restart; F5/F9 save/load; F1 help; Esc exit."
+                    "Dreadmarch native campaign foundation\n  Default: character creator and single-player campaign\n  --class ID --name NAME  seed the editable creator\n  --load PATH            load a validated exported campaign or skirmish save\n  --save PATH            choose the F5/F9 save file\n  --campaign-smoke       exercise native creator, campaign, skills and saves\n  --skirmish             original tactical mode\n  --smoke-test           original tactical rendering regression\n  --screenshot PATH      capture PNG after scene warmup\nCampaign: right-click/WASD move; Space selected skill; 1-6 learned skills; J interact/loot/travel; K skills; I inventory; [/] select; L learn; U equip; T retrain in town; F2 creator; Q/E orbit; wheel zoom; P pause; F5/F9 save/load; F1 help."
                 );
                 return;
             }
@@ -253,11 +463,56 @@ fn main() {
             }
         }
     }
+    if cli.campaign_smoke {
+        skirmish = false;
+    }
+    if let Err(error) = creation.validate() {
+        eprintln!("Invalid character: {error}");
+        std::process::exit(2);
+    }
+    let mut battle = if skirmish {
+        Battle::default()
+    } else {
+        Battle::campaign(creation, true)
+    };
+    if let Some(path) = load_path {
+        let world = std::fs::read_to_string(&path)
+            .map_err(|e| format!("{e}"))
+            .and_then(|text| SimWorld::load_json(&text).map_err(|e| format!("{e:?}")))
+            .unwrap_or_else(|error| {
+                eprintln!("Cannot load {path}: {error}");
+                std::process::exit(2);
+            });
+        battle.replace_world(world);
+    }
+    if cli.campaign_smoke && battle.world.campaign.is_none() {
+        eprintln!("--campaign-smoke requires a campaign world");
+        std::process::exit(2);
+    }
+    if cli.campaign_smoke && battle.creator.is_none() {
+        battle.creator = battle.world.campaign.as_ref().map(|c| c.character.clone());
+        battle.paused = true;
+    }
+    if cli.save_path.is_empty() {
+        cli.save_path = if battle.world.campaign.is_some() {
+            "dreadmarch-campaign.json"
+        } else {
+            "dreadmarch-save.json"
+        }
+        .into();
+    }
+    let mut orbit = Orbit::default();
+    if battle.world.campaign.is_some() {
+        if let Some(hero) = battle.world.commander() {
+            orbit.focus = point3(hero.position, 0.0);
+        }
+        orbit.height = if battle.creator.is_some() { 11.0 } else { 24.0 };
+    }
     let smoke = cli.smoke;
     let mut app = App::new();
     app.insert_resource(cli)
-        .insert_resource(Battle::default())
-        .insert_resource(Orbit::default())
+        .insert_resource(battle)
+        .insert_resource(orbit)
         .insert_resource(Time::<Fixed>::from_hz(f64::from(TICK_HZ)))
         .insert_resource(ClearColor(Color::srgb(0.025, 0.041, 0.05)))
         .insert_resource(GlobalAmbientLight {
@@ -267,7 +522,7 @@ fn main() {
         });
     let plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!smoke).then(|| Window {
-            title: "DREADMARCH | The Hollow March - playable foundation".into(),
+            title: "DREADMARCH | The Ashen Concord - single-player foundation".into(),
             resolution: (1440, 900).into(),
             present_mode: bevy::window::PresentMode::AutoNoVsync,
             ..default()
@@ -293,12 +548,15 @@ fn main() {
         .add_systems(
             Update,
             (
-                camera_input.run_if(interactive),
+                camera_input,
                 keyboard_input.run_if(interactive),
                 pointer_input.run_if(interactive),
                 button_input.run_if(interactive),
+                sync_region_geometry,
                 update_units,
                 update_hud,
+                update_campaign_ui,
+                update_poi_labels,
                 draw_tactical,
                 smoke_driver,
             )
@@ -337,12 +595,14 @@ fn piece(
     mat: Handle<StandardMaterial>,
     pos: Vec3,
     scale: Vec3,
-) {
-    commands.spawn((
-        Mesh3d(mesh),
-        MeshMaterial3d(mat),
-        Transform::from_translation(pos).with_scale(scale),
-    ));
+) -> Entity {
+    commands
+        .spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(mat),
+            Transform::from_translation(pos).with_scale(scale),
+        ))
+        .id()
 }
 fn noise(x: i32, z: i32) -> f32 {
     let mut n =
@@ -358,7 +618,6 @@ fn setup_scene(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    battle: Res<Battle>,
     orbit: Res<Orbit>,
     cli: Res<Cli>,
 ) {
@@ -401,56 +660,6 @@ fn setup_scene(
         Vec3::new(24.0, -0.03, 18.0),
         Vec3::new(48.0, 0.12, 36.0),
     );
-    // Terrain, ruin and road geometry is driven by the actual navigation grid.
-    for z in 0..i32::from(battle.world.map.height) {
-        for x in 0..i32::from(battle.world.map.width) {
-            let n = noise(x, z);
-            let center = Vec3::new(x as f32 + 0.5, 0.0, z as f32 + 0.5);
-            if !battle.world.map.is_walkable(x, z) {
-                let h = 0.6 + n * 1.9;
-                piece(
-                    &mut commands,
-                    cube.clone(),
-                    if n > 0.65 {
-                        pale.clone()
-                    } else {
-                        stone.clone()
-                    },
-                    center + Vec3::Y * h * 0.5,
-                    Vec3::new(0.95, h, 0.95),
-                );
-                if n > 0.92 {
-                    piece(
-                        &mut commands,
-                        cube.clone(),
-                        pale.clone(),
-                        center + Vec3::Y * (h + 0.1),
-                        Vec3::new(1.13, 0.2, 1.13),
-                    );
-                }
-            } else if (z - 18).abs() < 2 || x % 12 == 0 {
-                piece(
-                    &mut commands,
-                    cube.clone(),
-                    if n > 0.5 {
-                        stone.clone()
-                    } else {
-                        basalt.clone()
-                    },
-                    center + Vec3::Y * 0.045,
-                    Vec3::new(0.92, 0.08, 0.92),
-                );
-            } else if n > 0.9 {
-                piece(
-                    &mut commands,
-                    sphere.clone(),
-                    moss.clone(),
-                    center + Vec3::Y * 0.12,
-                    Vec3::new(0.7, 0.25, 0.65),
-                );
-            }
-        }
-    }
     // Border monuments frame the playable area without adding invisible collision.
     for x in (2..48).step_by(5) {
         for z in [-1.0, 37.0] {
@@ -519,27 +728,6 @@ fn setup_scene(
             Transform::from_xyz(x, 3.0, 18.0),
         ));
     }
-    for objective in &battle.world.objectives {
-        let pos = point3(objective.position, 0.1);
-        piece(
-            &mut commands,
-            cube.clone(),
-            dark.clone(),
-            pos,
-            Vec3::new(2.4, 0.2, 2.4),
-        );
-        commands.spawn((
-            RelicVisual(objective.id),
-            Mesh3d(cone.clone()),
-            MeshMaterial3d(gold.clone()),
-            Transform::from_translation(pos + Vec3::Y * 1.3).with_scale(Vec3::new(0.9, 2.1, 0.9)),
-        ));
-        commands.spawn((
-            Mesh3d(ring.clone()),
-            MeshMaterial3d(gold.clone()),
-            Transform::from_translation(pos + Vec3::Y * 0.2).with_scale(Vec3::splat(3.8)),
-        ));
-    }
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
@@ -597,6 +785,10 @@ fn setup_scene(
         ember,
         cloth,
         bone,
+        stone,
+        basalt,
+        moss,
+        pale,
     });
 }
 
@@ -609,6 +801,179 @@ fn label(text: &str, size: f32, color: Color) -> (Text, TextFont, TextColor) {
         },
         TextColor(color),
     )
+}
+
+fn sync_region_geometry(
+    mut commands: Commands,
+    battle: Res<Battle>,
+    assets: Res<VisualAssets>,
+    previous: Query<Entity, With<RegionGeometry>>,
+    mut generation: Local<u64>,
+) {
+    if *generation == battle.scene_generation {
+        return;
+    }
+    *generation = battle.scene_generation;
+    for entity in &previous {
+        commands.entity(entity).despawn();
+    }
+    for z in 0..i32::from(battle.world.map.height) {
+        for x in 0..i32::from(battle.world.map.width) {
+            let n = noise(x, z);
+            let center = Vec3::new(x as f32 + 0.5, 0.0, z as f32 + 0.5);
+            let geometry = if !battle.world.map.is_walkable(x, z) {
+                let height = 0.6 + n * 1.9;
+                Some((
+                    assets.cube.clone(),
+                    if n > 0.65 {
+                        assets.pale.clone()
+                    } else {
+                        assets.stone.clone()
+                    },
+                    center + Vec3::Y * height * 0.5,
+                    Vec3::new(0.95, height, 0.95),
+                ))
+            } else if (z - 18).abs() < 2 || x % 12 == 0 {
+                Some((
+                    assets.cube.clone(),
+                    if n > 0.5 {
+                        assets.stone.clone()
+                    } else {
+                        assets.basalt.clone()
+                    },
+                    center + Vec3::Y * 0.045,
+                    Vec3::new(0.92, 0.08, 0.92),
+                ))
+            } else if n > 0.9 {
+                Some((
+                    assets.sphere.clone(),
+                    assets.moss.clone(),
+                    center + Vec3::Y * 0.12,
+                    Vec3::new(0.7, 0.25, 0.65),
+                ))
+            } else {
+                None
+            };
+            if let Some((mesh, mat, pos, scale)) = geometry {
+                let entity = piece(&mut commands, mesh, mat, pos, scale);
+                commands.entity(entity).insert(RegionGeometry);
+            }
+            if !battle.world.map.is_walkable(x, z) && n > 0.92 {
+                let cap = piece(
+                    &mut commands,
+                    assets.cube.clone(),
+                    assets.pale.clone(),
+                    center + Vec3::Y * (0.7 + n * 1.9),
+                    Vec3::new(1.13, 0.2, 1.13),
+                );
+                commands.entity(cap).insert(RegionGeometry);
+            }
+        }
+    }
+    for objective in &battle.world.objectives {
+        let pos = point3(objective.position, 0.1);
+        let entity = piece(
+            &mut commands,
+            assets.cube.clone(),
+            assets.dark.clone(),
+            pos,
+            Vec3::new(2.4, 0.2, 2.4),
+        );
+        commands.entity(entity).insert(RegionGeometry);
+        commands.spawn((
+            RegionGeometry,
+            RelicVisual(objective.id),
+            Mesh3d(assets.cone.clone()),
+            MeshMaterial3d(assets.gold.clone()),
+            Transform::from_translation(pos + Vec3::Y * 1.3).with_scale(Vec3::new(0.9, 2.1, 0.9)),
+        ));
+        let ring = piece(
+            &mut commands,
+            assets.ring.clone(),
+            assets.gold.clone(),
+            pos + Vec3::Y * 0.2,
+            Vec3::splat(3.8),
+        );
+        commands.entity(ring).insert(RegionGeometry);
+    }
+    if let Some(c) = &battle.world.campaign {
+        for poi in rpg::points_of_interest(&c.region) {
+            let pos = point3(poi.position, 0.15);
+            let (mesh, scale) = match poi.kind.as_str() {
+                "person" => (assets.cone.clone(), Vec3::new(0.8, 1.6, 0.8)),
+                "gate" => (assets.ring.clone(), Vec3::splat(2.4)),
+                "chest" => (assets.cube.clone(), Vec3::new(1.1, 0.7, 0.7)),
+                _ => (assets.cone.clone(), Vec3::new(0.8, 2.1, 0.8)),
+            };
+            let entity = piece(
+                &mut commands,
+                mesh,
+                if poi.kind == "person" {
+                    assets.teal.clone()
+                } else {
+                    assets.gold.clone()
+                },
+                pos + Vec3::Y * 0.7,
+                scale,
+            );
+            commands.entity(entity).insert(RegionGeometry);
+            if poi.kind == "person" {
+                let head = piece(
+                    &mut commands,
+                    assets.sphere.clone(),
+                    assets.bone.clone(),
+                    pos + Vec3::Y * 1.8,
+                    Vec3::splat(0.5),
+                );
+                commands.entity(head).insert(RegionGeometry);
+            }
+            commands.spawn((
+                RegionGeometry,
+                PoiLabel(poi.position),
+                GlobalZIndex(-1),
+                label(&poi.name, 12.0, GOLD),
+                Node {
+                    position_type: PositionType::Absolute,
+                    padding: UiRect::all(px(4)),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.02, 0.03, 0.04, 0.8)),
+            ));
+        }
+    }
+}
+
+fn update_poi_labels(
+    camera: Single<(&Camera, &GlobalTransform), With<MainCamera>>,
+    battle: Res<Battle>,
+    mut labels: Query<(&PoiLabel, &mut Node)>,
+) {
+    let (camera, transform) = *camera;
+    for (poi, mut node) in &mut labels {
+        if battle.creator.is_some() {
+            node.display = Display::None;
+        } else if let Ok(p) = camera.world_to_viewport(transform, point3(poi.0, 2.4)) {
+            node.left = px(p.x - 50.0);
+            node.top = px(p.y);
+            let size = camera
+                .logical_viewport_size()
+                .unwrap_or(Vec2::new(1440.0, 900.0));
+            node.display = if p.x < 0.0
+                || p.x > size.x
+                || p.y < 95.0
+                || p.y > size.y - 220.0
+                || ((battle.help || battle.panel != CampaignPanel::Closed)
+                    && p.x < 600.0
+                    && p.y < 690.0)
+            {
+                Display::None
+            } else {
+                Display::Flex
+            };
+        } else {
+            node.display = Display::None;
+        }
+    }
 }
 fn setup_ui(mut commands: Commands) {
     commands
@@ -636,7 +1001,7 @@ fn setup_ui(mut commands: Commands) {
                 .with_children(|p| {
                     p.spawn(label("D R E A D M A R C H", 26.0, GOLD));
                     p.spawn(label(
-                        "THE HOLLOW MARCH    /    ORIGINAL GEOMETRY PLAYTEST",
+                        "THE ASHEN CONCORD    /    PLAYABLE FOUNDATION",
                         11.0,
                         Color::srgb(0.55, 0.68, 0.69),
                     ));
@@ -645,12 +1010,17 @@ fn setup_ui(mut commands: Commands) {
         });
     commands.spawn((Node { position_type:PositionType::Absolute, bottom:px(0), left:px(0), right:px(0), min_height:px(138), padding:UiRect::all(px(18)), flex_direction:FlexDirection::Column, row_gap:px(12), ..default() }, BackgroundColor(UI_BG))).with_children(|parent| {
         parent.spawn((StatusLine, label("", 15.0, TEAL)));
-        parent.spawn(Node { column_gap:px(8), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() }).with_children(|p| {
+        parent.spawn((SkirmishControls, Node { column_gap:px(8), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() })).with_children(|p| {
             for (text, action) in [(format!("1  VANGUARD  {}", UnitKind::Vanguard.stats().recruitment_cost.unwrap_or(0)),Action::Vanguard),(format!("2  RANGER  {}", UnitKind::Ranger.stats().recruitment_cost.unwrap_or(0)),Action::Ranger),("SPACE  SOULFIRE".into(),Action::Spell),("TAB  ARMY".into(),Action::Army),("H  HOLD".into(),Action::Hold),("P  PAUSE".into(),Action::Pause),("R  RESTART".into(),Action::Restart),("F1  HELP".into(),Action::Help)] {
                 p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(14),px(11)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(&text,13.0,GOLD));
             }
         });
-        parent.spawn(label("LEFT / DRAG select   |   RIGHT move   |   SHIFT + RIGHT attack-move   |   WASD pan   Q/E orbit   WHEEL zoom   |   F5 save   F9 load", 11.0, Color::srgb(0.54, 0.64, 0.65)));
+        parent.spawn((CampaignControls, Node { column_gap:px(6), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() })).with_children(|p| {
+            for (text, action) in [("SPACE  CAST", Action::Spell), ("J  INTERACT", Action::Interact), ("K  SKILLS", Action::Skills), ("[  PREV", Action::Previous), ("]  NEXT", Action::Next), ("L  LEARN", Action::Learn), ("I  INVENTORY", Action::Inventory), ("U  EQUIP", Action::Equip), ("T  RETRAIN", Action::Respec), ("P  PAUSE", Action::Pause), ("F2  CREATOR", Action::Creator), ("F1  HELP", Action::Help)] {
+                p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(10),px(9)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(text,12.0,GOLD));
+            }
+        });
+        parent.spawn(label("RIGHT move   |   SHIFT + RIGHT attack-move   |   Q/E orbit   WHEEL zoom   |   C center hero   |   F5 save   F9 load   F12 screenshot", 11.0, Color::srgb(0.54, 0.64, 0.65)));
     });
     commands.spawn((
         HelpText,
@@ -677,6 +1047,93 @@ fn setup_ui(mut commands: Commands) {
         BorderColor::all(TEAL),
         Visibility::Hidden,
     ));
+    commands.spawn((CreatorPanel, Node {
+        position_type: PositionType::Absolute, left: px(24), top: px(105), width: px(610),
+        max_width: percent(95), padding: UiRect::all(px(20)), row_gap: px(10),
+        flex_direction: FlexDirection::Column, ..default()
+    }, GlobalZIndex(20), BackgroundColor(UI_BG), BorderColor::all(GOLD))).with_children(|p| {
+        p.spawn(label("CREATE YOUR WANDERER", 24.0, GOLD));
+        p.spawn((CreatorSummary, label("", 14.0, Color::srgb(0.82, 0.88, 0.85))));
+        p.spawn(Node { flex_wrap: FlexWrap::Wrap, column_gap: px(5), row_gap: px(5), ..default() }).with_children(|buttons| {
+            for (index, class) in rpg::catalogue().classes.iter().enumerate() {
+                buttons.spawn((UiButton, Hovered::default(), Action::ChooseClass(index),
+                    Node { width: px(136), padding: UiRect::all(px(7)), ..default() },
+                    BackgroundColor(Color::srgb(0.075, 0.105, 0.12))))
+                    .with_child(label(&class.name, 12.0, GOLD));
+            }
+        });
+        p.spawn(Node { flex_wrap: FlexWrap::Wrap, column_gap: px(6), row_gap: px(5), ..default() }).with_children(|buttons| {
+            for (text, action) in [("EDIT NAME", Action::EditName), ("BODY", Action::Body), ("SKIN", Action::Skin), ("HAIR", Action::Hair), ("HAIRSTYLE", Action::HairStyle), ("EYES", Action::Eyes), ("ACCENT", Action::Accent), ("STATURE", Action::Stature)] {
+                buttons.spawn((UiButton, Hovered::default(), action,
+                    Node { padding: UiRect::axes(px(10), px(8)), ..default() },
+                    BackgroundColor(Color::srgb(0.075, 0.105, 0.12))))
+                    .with_child(label(text, 12.0, TEAL));
+            }
+        });
+        p.spawn(label("Appearance is independent of class. Procedural preview; production character art is still to come.", 11.0, Color::srgb(0.57, 0.67, 0.67)));
+        p.spawn(Node { column_gap: px(12), ..default() }).with_children(|buttons| {
+            for (text, action) in [("BEGIN NEW JOURNEY", Action::Begin), ("RETURN / CANCEL", Action::CloseCreator)] {
+                buttons.spawn((UiButton, Hovered::default(), action,
+                    Node { padding: UiRect::axes(px(16), px(11)), ..default() },
+                    BackgroundColor(Color::srgb(0.075, 0.105, 0.12))))
+                    .with_child(label(text, 14.0, GOLD));
+            }
+        });
+    });
+}
+
+fn update_campaign_ui(
+    battle: Res<Battle>,
+    mut panels: Query<
+        (
+            &mut Node,
+            Has<CreatorPanel>,
+            Has<CampaignControls>,
+            Has<SkirmishControls>,
+        ),
+        Or<(
+            With<CreatorPanel>,
+            With<CampaignControls>,
+            With<SkirmishControls>,
+        )>,
+    >,
+    mut summary: Single<&mut Text, With<CreatorSummary>>,
+) {
+    for (mut node, creator, campaign, skirmish) in &mut panels {
+        let visible = (creator && battle.creator.is_some())
+            || (campaign && battle.world.campaign.is_some() && battle.creator.is_none())
+            || (skirmish && battle.world.campaign.is_none() && battle.creator.is_none());
+        node.display = if visible {
+            Display::Flex
+        } else {
+            Display::None
+        };
+    }
+    if let Some(draft) = &battle.creator {
+        let profile = rpg::class(&draft.class_id).expect("creator class");
+        summary.0 = format!(
+            "NAME: {}{}\n{}  ·  {}\n{}\n\nBODY {}   STATURE {}%   HAIRSTYLE {}\nSkin {}  Hair {}  Eyes {}  Accent {}",
+            draft.name,
+            if battle.editing_name {
+                " |  TYPE TO EDIT · ENTER TO FINISH"
+            } else {
+                ""
+            },
+            profile.name,
+            profile.branches.join(" / "),
+            profile.description,
+            draft.body,
+            draft.stature,
+            draft.hair_style,
+            draft.skin,
+            draft.hair,
+            draft.eyes,
+            draft.accent
+        );
+        if let Err(error) = draft.validate() {
+            summary.0.push_str(&format!("\n{error}"));
+        }
+    }
 }
 
 fn camera_transform(orbit: &Orbit) -> Transform {
@@ -689,27 +1146,38 @@ fn camera_input(
     mut wheel: MessageReader<MouseWheel>,
     mut orbit: ResMut<Orbit>,
     mut camera: Single<(&mut Transform, &mut Projection), With<MainCamera>>,
+    battle: Res<Battle>,
+    mut creator_was_open: Local<bool>,
 ) {
     let dt = time.delta_secs();
     let right = Vec3::new(orbit.yaw.cos(), 0.0, -orbit.yaw.sin());
     let forward = Vec3::new(-orbit.yaw.sin(), 0.0, -orbit.yaw.cos());
     let speed = orbit.height * 0.55 * dt;
-    if keys.pressed(KeyCode::KeyW) {
+    if battle.world.campaign.is_some() {
+        if let Some(hero) = battle.world.commander() {
+            orbit.focus = point3(hero.position, 0.0);
+        }
+        if *creator_was_open != battle.creator.is_some() {
+            orbit.height = if battle.creator.is_some() { 11.0 } else { 24.0 };
+            *creator_was_open = battle.creator.is_some();
+        }
+    }
+    if keys.pressed(KeyCode::KeyW) && battle.world.campaign.is_none() {
         orbit.focus += forward * speed;
     }
-    if keys.pressed(KeyCode::KeyS) {
+    if keys.pressed(KeyCode::KeyS) && battle.world.campaign.is_none() {
         orbit.focus -= forward * speed;
     }
-    if keys.pressed(KeyCode::KeyA) {
+    if keys.pressed(KeyCode::KeyA) && battle.world.campaign.is_none() {
         orbit.focus -= right * speed;
     }
-    if keys.pressed(KeyCode::KeyD) {
+    if keys.pressed(KeyCode::KeyD) && battle.world.campaign.is_none() {
         orbit.focus += right * speed;
     }
-    if keys.pressed(KeyCode::KeyQ) {
+    if keys.pressed(KeyCode::KeyQ) && !battle.editing_name {
         orbit.yaw -= dt;
     }
-    if keys.pressed(KeyCode::KeyE) {
+    if keys.pressed(KeyCode::KeyE) && !battle.editing_name {
         orbit.yaw += dt;
     }
     for event in wheel.read() {
@@ -728,82 +1196,193 @@ fn camera_input(
 
 fn keyboard_input(
     keys: Res<ButtonInput<KeyCode>>,
+    mut text_events: MessageReader<KeyboardInput>,
     mut battle: ResMut<Battle>,
     mut orbit: ResMut<Orbit>,
+    cli: Res<Cli>,
     mut exit: MessageWriter<AppExit>,
     mut commands: Commands,
+    mut last_walk: Local<u64>,
 ) {
-    if keys.just_pressed(KeyCode::Escape) {
-        exit.write(AppExit::Success);
+    if *last_walk > battle.world.tick {
+        *last_walk = 0;
     }
-    if keys.just_pressed(KeyCode::Tab) {
-        battle.all_army();
+    if battle.ui_keyboard_consumed {
+        battle.ui_keyboard_consumed = false;
+        text_events.clear();
+        return;
+    }
+    if battle.creator.is_some() {
+        if battle.editing_name {
+            if keys.just_pressed(KeyCode::Backspace) {
+                battle.creator.as_mut().expect("draft").name.pop();
+            }
+            if keys.pressed(KeyCode::ControlLeft) && keys.just_pressed(KeyCode::KeyA) {
+                battle.creator.as_mut().expect("draft").name.clear();
+            }
+            for event in text_events.read() {
+                if event.state == ButtonState::Pressed
+                    && !keys.pressed(KeyCode::ControlLeft)
+                    && !keys.pressed(KeyCode::ControlRight)
+                    && let Some(text) = &event.text
+                {
+                    let draft = battle.creator.as_mut().expect("draft");
+                    for ch in text.chars().filter(|ch| !ch.is_control()) {
+                        if draft.name.chars().count() < 32 {
+                            draft.name.push(ch);
+                        }
+                    }
+                }
+            }
+            if keys.just_pressed(KeyCode::Enter) || keys.just_pressed(KeyCode::Escape) {
+                battle.editing_name = false;
+            }
+        } else {
+            text_events.clear();
+            if keys.just_pressed(KeyCode::Enter) {
+                battle.begin_journey();
+            }
+            if keys.just_pressed(KeyCode::Escape) {
+                perform_action(Action::CloseCreator, &mut battle);
+            }
+        }
+        return;
+    }
+    text_events.clear();
+    if keys.just_pressed(KeyCode::Escape) {
+        if battle.panel != CampaignPanel::Closed {
+            battle.panel = CampaignPanel::Closed;
+        } else if battle.help {
+            battle.help = false;
+        } else {
+            exit.write(AppExit::Success);
+        }
     }
     if keys.just_pressed(KeyCode::KeyC)
-        && let Some(unit) = battle
-            .world
-            .units
-            .iter()
-            .find(|u| u.kind == UnitKind::Commander && u.hp > 0)
+        && let Some(unit) = battle.world.commander()
     {
-        let id = unit.id;
-        let pos = point3(unit.position, 0.0);
+        let (id, pos) = (unit.id, point3(unit.position, 0.0));
         battle.selected.clear();
         battle.selected.insert(id);
         orbit.focus = pos;
     }
-    if keys.just_pressed(KeyCode::KeyP) {
-        battle.paused = !battle.paused;
+    for (key, action) in [
+        (KeyCode::KeyP, Action::Pause),
+        (KeyCode::F1, Action::Help),
+        (KeyCode::KeyR, Action::Restart),
+    ] {
+        if keys.just_pressed(key) {
+            perform_action(action, &mut battle);
+        }
     }
-    if keys.just_pressed(KeyCode::F1) {
-        battle.help = !battle.help;
-    }
-    if keys.just_pressed(KeyCode::KeyR) {
-        *battle = Battle::default();
-    }
-    if keys.just_pressed(KeyCode::Digit1) {
-        battle.command(SimCommand::Recruit {
-            kind: UnitKind::Vanguard,
-        });
-    }
-    if keys.just_pressed(KeyCode::Digit2) {
-        battle.command(SimCommand::Recruit {
-            kind: UnitKind::Ranger,
-        });
-    }
-    if keys.just_pressed(KeyCode::KeyH) {
-        let ids = battle.selected_ids();
-        battle.command(SimCommand::Hold { units: ids });
+    if battle.world.campaign.is_some() {
+        for (key, action) in [
+            (KeyCode::KeyJ, Action::Interact),
+            (KeyCode::KeyK, Action::Skills),
+            (KeyCode::KeyI, Action::Inventory),
+            (KeyCode::BracketLeft, Action::Previous),
+            (KeyCode::BracketRight, Action::Next),
+            (KeyCode::KeyL, Action::Learn),
+            (KeyCode::KeyU, Action::Equip),
+            (KeyCode::KeyT, Action::Respec),
+            (KeyCode::F2, Action::Creator),
+        ] {
+            if keys.just_pressed(key) {
+                perform_action(action, &mut battle);
+            }
+        }
+        for (slot, key) in [
+            KeyCode::Digit1,
+            KeyCode::Digit2,
+            KeyCode::Digit3,
+            KeyCode::Digit4,
+            KeyCode::Digit5,
+            KeyCode::Digit6,
+        ]
+        .iter()
+        .enumerate()
+        {
+            if keys.just_pressed(*key) {
+                let index = battle.world.campaign.as_ref().and_then(|c| {
+                    c.class()
+                        .skills
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, s)| s.kind == "active" && c.learned.contains(&s.id))
+                        .nth(slot)
+                        .map(|(i, _)| i)
+                });
+                if let Some(index) = index {
+                    battle.skill_index = index;
+                    if let Some(target) = battle
+                        .cursor_world
+                        .or_else(|| battle.world.commander().map(|u| u.position))
+                    {
+                        battle.cast_selected(target);
+                    }
+                }
+            }
+        }
+        if !battle.paused && battle.world.tick.saturating_sub(*last_walk) >= 4 {
+            let x = i32::from(keys.pressed(KeyCode::KeyD)) - i32::from(keys.pressed(KeyCode::KeyA));
+            let z = i32::from(keys.pressed(KeyCode::KeyS)) - i32::from(keys.pressed(KeyCode::KeyW));
+            if (x != 0 || z != 0)
+                && let Some(hero) = battle.world.commander()
+            {
+                let id = hero.id;
+                let right = Vec3::new(orbit.yaw.cos(), 0.0, -orbit.yaw.sin());
+                let forward = Vec3::new(orbit.yaw.sin(), 0.0, orbit.yaw.cos());
+                let position = point3(hero.position, 0.0)
+                    + (right * x as f32 + forward * z as f32).normalize() * 2.0;
+                if let Some(target) = battle.world.map.nearest_walkable(point2(position)) {
+                    battle.command(SimCommand::Move {
+                        units: vec![id],
+                        target,
+                        attack_move: true,
+                    });
+                }
+                *last_walk = battle.world.tick;
+            }
+        }
+    } else {
+        for (key, action) in [
+            (KeyCode::Tab, Action::Army),
+            (KeyCode::Digit1, Action::Vanguard),
+            (KeyCode::Digit2, Action::Ranger),
+            (KeyCode::KeyH, Action::Hold),
+        ] {
+            if keys.just_pressed(key) {
+                perform_action(action, &mut battle);
+            }
+        }
     }
     if keys.just_pressed(KeyCode::Space)
-        && let Some(target) = battle.cursor_world
+        && let Some(target) = battle
+            .cursor_world
+            .or_else(|| battle.world.commander().map(|u| u.position))
     {
-        battle.command(SimCommand::Cast { target });
+        battle.cast_selected(target);
     }
     if keys.just_pressed(KeyCode::F5) {
         match battle.world.save_json() {
-            Ok(data) => match std::fs::write("dreadmarch-save.json", data) {
-                Ok(()) => battle.notice = "Saved dreadmarch-save.json".into(),
-                Err(e) => battle.notice = format!("Save failed: {e}"),
+            Ok(data) => match std::fs::write(&cli.save_path, data) {
+                Ok(()) => battle.notice = format!("Saved {}", cli.save_path),
+                Err(error) => battle.notice = format!("Save failed: {error}"),
             },
-            Err(e) => battle.notice = format!("Save failed: {e:?}"),
+            Err(error) => battle.notice = format!("Save failed: {error:?}"),
         }
         battle.notice_ticks = 180;
     }
     if keys.just_pressed(KeyCode::F9) {
-        match std::fs::read_to_string("dreadmarch-save.json") {
-            Ok(data) => match SimWorld::load_json(&data) {
-                Ok(world) => {
-                    battle.world = world;
-                    battle.all_army();
-                    battle.impacts.clear();
-                    battle.spell_effect = None;
-                    battle.order_marker = None;
-                    battle.notice = "Save restored and validated.".into();
-                }
-                Err(e) => battle.notice = format!("Load rejected: {e:?}"),
-            },
-            Err(e) => battle.notice = format!("Load failed: {e}"),
+        let result = std::fs::read_to_string(&cli.save_path)
+            .map_err(|e| format!("{e}"))
+            .and_then(|data| SimWorld::load_json(&data).map_err(|e| format!("{e:?}")));
+        match result {
+            Ok(world) => {
+                battle.replace_world(world);
+                battle.notice = "Save restored and validated.".into();
+            }
+            Err(error) => battle.notice = format!("Load rejected: {error}"),
         }
         battle.notice_ticks = 180;
     }
@@ -822,18 +1401,50 @@ fn pointer_input(
     mut battle: ResMut<Battle>,
     mut rect: Single<(&mut Node, &mut Visibility), With<DragRect>>,
 ) {
+    if battle.creator.is_some() {
+        return;
+    }
     let Some(cursor) = window.cursor_position() else {
         return;
     };
     let (camera, transform) = *camera;
     let over_ui = cursor.y < 90.0
-        || cursor.y > window.height() - 145.0
-        || (battle.help && cursor.x < 570.0 && cursor.y < 580.0);
+        || cursor.y
+            > window.height()
+                - if battle.world.campaign.is_some() {
+                    220.0
+                } else {
+                    145.0
+                }
+        || ((battle.help || battle.panel != CampaignPanel::Closed)
+            && cursor.x < 600.0
+            && cursor.y < 690.0);
     let ground = camera
         .viewport_to_world(transform, cursor)
         .ok()
         .and_then(|r| r.plane_intersection_point(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y)));
     battle.cursor_world = ground.map(point2);
+    if battle.world.campaign.is_some() {
+        if !over_ui && let Some(target) = battle.cursor_world {
+            if buttons.just_pressed(MouseButton::Left) && battle.cast_mode {
+                battle.cast_selected(target);
+                battle.cast_mode = false;
+            } else if (buttons.just_pressed(MouseButton::Right)
+                || buttons.just_pressed(MouseButton::Left))
+                && let Some(hero) = battle.world.commander()
+            {
+                let id = hero.id;
+                battle.command(SimCommand::Move {
+                    units: vec![id],
+                    target,
+                    attack_move: true,
+                });
+                battle.order_marker = Some((point3(target, 0.16), 1.3));
+                battle.cast_mode = false;
+            }
+        }
+        return;
+    }
     if buttons.just_pressed(MouseButton::Left) && !over_ui {
         if battle.cast_mode {
             if let Some(target) = battle.cursor_world {
@@ -917,11 +1528,22 @@ fn pointer_input(
 }
 
 fn button_input(
-    mut buttons: Query<(&Hovered, Has<Pressed>, &mut BackgroundColor), With<UiButton>>,
+    mut buttons: Query<(&Hovered, Has<Pressed>, &Action, &mut BackgroundColor), With<UiButton>>,
+    battle: Res<Battle>,
 ) {
-    for (hovered, pressed, mut bg) in &mut buttons {
+    for (hovered, pressed, action, mut bg) in &mut buttons {
+        let selected = if let Action::ChooseClass(index) = action {
+            battle
+                .creator
+                .as_ref()
+                .is_some_and(|draft| rpg::catalogue().classes[*index].id == draft.class_id)
+        } else {
+            false
+        };
         bg.0 = if pressed {
             Color::srgb(0.23, 0.30, 0.28)
+        } else if selected {
+            Color::srgb(0.18, 0.30, 0.27)
         } else if hovered.get() {
             Color::srgb(0.14, 0.22, 0.24)
         } else {
@@ -929,10 +1551,35 @@ fn button_input(
         };
     }
 }
-fn activate_button(event: On<Activate>, actions: Query<&Action>, mut battle: ResMut<Battle>) {
-    let Ok(action) = actions.get(event.entity) else {
-        return;
-    };
+fn activate_button(
+    event: On<Activate>,
+    actions: Query<&Action>,
+    mut battle: ResMut<Battle>,
+    mut focus: Option<ResMut<bevy::input_focus::InputFocus>>,
+    keys: Option<Res<ButtonInput<KeyCode>>>,
+) {
+    if let Ok(action) = actions.get(event.entity) {
+        perform_action(*action, &mut battle);
+        // UI activation owns its keypress. Release button focus so a typed space
+        // in the name editor cannot activate its previous button again.
+        battle.ui_keyboard_consumed = keys.is_some_and(|keys| {
+            keys.just_pressed(KeyCode::Space) || keys.just_pressed(KeyCode::Enter)
+        });
+        if let Some(focus) = &mut focus {
+            focus.clear();
+        }
+    }
+}
+
+fn cycle_color(color: &mut String, choices: &[&str]) {
+    let index = choices
+        .iter()
+        .position(|c| *c == color.as_str())
+        .unwrap_or(0);
+    *color = choices[(index + 1) % choices.len()].into();
+}
+
+fn perform_action(action: Action, battle: &mut Battle) {
     match action {
         Action::Vanguard => battle.command(SimCommand::Recruit {
             kind: UnitKind::Vanguard,
@@ -942,22 +1589,135 @@ fn activate_button(event: On<Activate>, actions: Query<&Action>, mut battle: Res
         }),
         Action::Spell => {
             battle.cast_mode = true;
-            battle.notice = "Choose a ground target for Soulfire.".into();
+            battle.notice = if let Some(skill) = battle.selected_skill() {
+                format!("Choose a ground target for {}.", skill.name)
+            } else {
+                "Choose a ground target for Soulfire.".into()
+            };
             battle.notice_ticks = 150;
         }
         Action::Army => battle.all_army(),
         Action::Hold => {
-            let ids = battle.selected_ids();
-            battle.command(SimCommand::Hold { units: ids });
+            let units = battle.selected_ids();
+            battle.command(SimCommand::Hold { units });
         }
         Action::Pause => battle.paused = !battle.paused,
-        Action::Restart => *battle = Battle::default(),
-        Action::Help => battle.help = !battle.help,
+        Action::Restart => battle.restart(),
+        Action::Help => {
+            battle.help = !battle.help;
+            battle.panel = CampaignPanel::Closed;
+        }
+        Action::Skills => {
+            battle.panel = if battle.panel == CampaignPanel::Skills {
+                CampaignPanel::Closed
+            } else {
+                CampaignPanel::Skills
+            };
+            battle.help = false;
+        }
+        Action::Inventory => {
+            battle.panel = if battle.panel == CampaignPanel::Inventory {
+                CampaignPanel::Closed
+            } else {
+                CampaignPanel::Inventory
+            };
+            battle.help = false;
+        }
+        Action::Previous => battle.cycle_selection(false),
+        Action::Next => battle.cycle_selection(true),
+        Action::Learn => battle.learn_selected(),
+        Action::Equip => battle.equip_selected(),
+        Action::Interact => battle.interact_nearest(),
+        Action::Respec => battle.command(SimCommand::Respec),
+        Action::Creator => {
+            if let Some(c) = &battle.world.campaign {
+                battle.creator = Some(c.character.clone());
+                battle.editing_name = false;
+                battle.paused = true;
+                battle.help = false;
+                battle.panel = CampaignPanel::Closed;
+            }
+        }
+        Action::ChooseClass(index) => {
+            if let Some(draft) = &mut battle.creator
+                && let Some(profile) = rpg::catalogue().classes.get(index)
+            {
+                draft.class_id = profile.id.clone();
+                draft.accent = profile.color.clone();
+            }
+        }
+        Action::EditName => battle.editing_name = !battle.editing_name,
+        Action::Body => {
+            if let Some(draft) = &mut battle.creator {
+                draft.body = match draft.body.as_str() {
+                    "athletic" => "slender",
+                    "slender" => "stocky",
+                    _ => "athletic",
+                }
+                .into();
+            }
+        }
+        Action::Skin => {
+            if let Some(draft) = &mut battle.creator {
+                cycle_color(
+                    &mut draft.skin,
+                    &["#f2d2b4", "#c69b7b", "#aa7655", "#704a37", "#422d25"],
+                );
+            }
+        }
+        Action::Hair => {
+            if let Some(draft) = &mut battle.creator {
+                cycle_color(
+                    &mut draft.hair,
+                    &[
+                        "#2d2521", "#aa7447", "#e1c998", "#a44e36", "#bcbac2", "#151820",
+                    ],
+                );
+            }
+        }
+        Action::HairStyle => {
+            if let Some(draft) = &mut battle.creator {
+                draft.hair_style = (draft.hair_style + 1) % 6;
+            }
+        }
+        Action::Eyes => {
+            if let Some(draft) = &mut battle.creator {
+                cycle_color(
+                    &mut draft.eyes,
+                    &["#81b7b0", "#638eb9", "#704b2d", "#b89b44", "#b2a1ce"],
+                );
+            }
+        }
+        Action::Accent => {
+            if let Some(draft) = &mut battle.creator {
+                cycle_color(
+                    &mut draft.accent,
+                    &[
+                        "#d9b66c", "#4cd5be", "#b45649", "#a18dc7", "#6e9fd1", "#c1c5c8",
+                    ],
+                );
+            }
+        }
+        Action::Stature => {
+            if let Some(draft) = &mut battle.creator {
+                draft.stature = if draft.stature >= 115 {
+                    85
+                } else {
+                    draft.stature + 5
+                };
+            }
+        }
+        Action::Begin => battle.begin_journey(),
+        Action::CloseCreator => {
+            battle.creator = None;
+            battle.editing_name = false;
+            battle.paused = false;
+        }
     }
 }
 
 fn step_simulation(mut battle: ResMut<Battle>, cli: Res<Cli>) {
-    if !battle.paused && !cli.smoke {
+    if !battle.paused && battle.creator.is_none() && !cli.smoke {
         battle.advance();
     }
     if battle.notice_ticks > 0 {
@@ -965,11 +1725,26 @@ fn step_simulation(mut battle: ResMut<Battle>, cli: Res<Cli>) {
     }
 }
 
-fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::Unit) {
+fn character_color(hex: &str) -> Color {
+    let component =
+        |start| u8::from_str_radix(&hex[start..start + 2], 16).unwrap_or(128) as f32 / 255.0;
+    Color::srgb(component(1), component(3), component(5))
+}
+
+fn spawn_unit(
+    commands: &mut Commands,
+    assets: &VisualAssets,
+    unit: &dread_sim::Unit,
+    appearance: Option<&CharacterCreation>,
+    materials: &mut Assets<StandardMaterial>,
+) {
     let ally = unit.team == Team::Player;
     let commander = unit.kind == UnitKind::Commander;
     let brute = unit.kind == UnitKind::Brute;
-    let ranger = unit.kind == UnitKind::Ranger;
+    let profile = appearance.and_then(|c| rpg::class(&c.class_id));
+    let ranger =
+        unit.kind == UnitKind::Ranger || profile.is_some_and(|c| c.combat_style == "ranged");
+    let caster = profile.is_some_and(|c| c.combat_style == "caster");
     let scale = if commander {
         1.25
     } else if brute {
@@ -982,7 +1757,9 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
     } else {
         assets.dark.clone()
     };
-    let accent = if ally {
+    let accent = if let Some(c) = appearance {
+        material(materials, character_color(&c.accent), 0.45)
+    } else if ally {
         if commander {
             assets.gold.clone()
         } else {
@@ -996,6 +1773,22 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
     } else {
         assets.ember.clone()
     };
+    let skin = appearance
+        .map(|c| material(materials, character_color(&c.skin), 0.0))
+        .unwrap_or_else(|| assets.bone.clone());
+    let hair = appearance
+        .map(|c| material(materials, character_color(&c.hair), 0.0))
+        .unwrap_or_else(|| accent.clone());
+    let eyes = appearance
+        .map(|c| material(materials, character_color(&c.eyes), 0.0))
+        .unwrap_or_else(|| glow.clone());
+    let stature = appearance.map_or(1.0, |c| c.stature as f32 / 100.0);
+    let width = appearance.map_or(1.0, |c| match c.body.as_str() {
+        "slender" => 0.82,
+        "stocky" => 1.22,
+        _ => 1.0,
+    });
+    let hair_style = appearance.map_or(3, |c| c.hair_style);
     commands
         .spawn((
             UnitVisual {
@@ -1005,15 +1798,22 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
                 previous: point3(unit.position, 0.08),
                 current: point3(unit.position, 0.08),
                 tick: 0,
+                appearance: appearance.cloned(),
             },
-            Transform::from_translation(point3(unit.position, 0.08)).with_scale(Vec3::splat(scale)),
+            Transform::from_translation(point3(unit.position, 0.08)).with_scale(Vec3::new(
+                scale * stature * width,
+                scale * stature,
+                scale * stature,
+            )),
             Visibility::default(),
         ))
         .with_children(|parent| {
             for (mesh, mat, pos, size) in [
                 (
                     assets.cone.clone(),
-                    if ally {
+                    if appearance.is_some() {
+                        accent.clone()
+                    } else if ally {
                         assets.cloth.clone()
                     } else {
                         assets.red.clone()
@@ -1029,15 +1829,19 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
                 ),
                 (
                     assets.sphere.clone(),
-                    assets.bone.clone(),
+                    skin.clone(),
                     Vec3::new(0.0, 1.19, 0.0),
                     Vec3::splat(0.40),
                 ),
                 (
                     assets.cube.clone(),
-                    accent.clone(),
+                    hair.clone(),
                     Vec3::new(0.0, 1.35, 0.0),
-                    Vec3::new(0.42, 0.16, 0.42),
+                    if hair_style == 0 {
+                        Vec3::ZERO
+                    } else {
+                        Vec3::new(0.42, 0.10 + hair_style as f32 * 0.025, 0.42)
+                    },
                 ),
                 (
                     assets.cube.clone(),
@@ -1065,7 +1869,7 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
                 ),
                 (
                     assets.cube.clone(),
-                    glow.clone(),
+                    eyes.clone(),
                     Vec3::new(0.0, 1.21, -0.20),
                     Vec3::new(0.27, 0.055, 0.05),
                 ),
@@ -1083,6 +1887,17 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
                     Transform::from_xyz(0.48, 0.8, -0.1)
                         .with_rotation(Quat::from_rotation_x(FRAC_PI_2))
                         .with_scale(Vec3::new(0.8, 0.4, 1.5)),
+                ));
+            } else if caster {
+                parent.spawn((
+                    Mesh3d(assets.cube.clone()),
+                    MeshMaterial3d(assets.dark.clone()),
+                    Transform::from_xyz(0.55, 0.85, 0.0).with_scale(Vec3::new(0.09, 1.8, 0.09)),
+                ));
+                parent.spawn((
+                    Mesh3d(assets.sphere.clone()),
+                    MeshMaterial3d(accent.clone()),
+                    Transform::from_xyz(0.55, 1.8, 0.0).with_scale(Vec3::splat(0.35)),
                 ));
             } else {
                 parent.spawn((
@@ -1102,12 +1917,30 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
                     Transform::from_xyz(0.45, 0.48, -0.15).with_scale(Vec3::new(0.35, 0.08, 0.1)),
                 ));
             }
-            if commander {
+            if commander && appearance.is_none() {
                 parent.spawn((
                     Mesh3d(assets.cone.clone()),
                     MeshMaterial3d(assets.gold.clone()),
                     Transform::from_xyz(0.0, 1.6, 0.0).with_scale(Vec3::new(0.28, 0.48, 0.28)),
                 ));
+            }
+            if appearance.is_some() && hair_style >= 2 {
+                for side in if hair_style == 4 {
+                    vec![-0.23, 0.23]
+                } else {
+                    vec![0.0]
+                } {
+                    parent.spawn((
+                        Mesh3d(assets.cone.clone()),
+                        MeshMaterial3d(hair.clone()),
+                        Transform::from_xyz(side, if hair_style == 3 { 1.57 } else { 1.1 }, 0.15)
+                            .with_scale(Vec3::new(
+                                if hair_style == 5 { 0.65 } else { 0.22 },
+                                0.6,
+                                0.30,
+                            )),
+                    ));
+                }
             }
             if brute {
                 for x in [-0.32, 0.32] {
@@ -1127,6 +1960,7 @@ fn update_units(
     mut commands: Commands,
     assets: Res<VisualAssets>,
     battle: Res<Battle>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     (time, fixed, cli): (Res<Time>, Res<Time<Fixed>>, Res<Cli>),
     mut scratch: Local<RenderScratch>,
     mut visuals: Query<(Entity, &mut UnitVisual, &mut Transform)>,
@@ -1156,12 +1990,25 @@ fn update_units(
     } else {
         fixed.overstep_fraction()
     };
+    let appearance = battle
+        .creator
+        .as_ref()
+        .or_else(|| battle.world.campaign.as_ref().map(|c| &c.character));
     for (entity, mut visual, mut transform) in &mut visuals {
         if let Some(&index) = scratch.indices.get(&visual.id) {
             let unit = &battle.world.units[index];
             // A restored save may reuse an ID for a different recruited class.
             // Recreate its presentation rather than retaining an obsolete mesh.
-            if unit.kind != visual.kind || unit.team != visual.team {
+            let desired_appearance =
+                if unit.kind == UnitKind::Commander && unit.team == Team::Player {
+                    appearance
+                } else {
+                    None
+                };
+            if unit.kind != visual.kind
+                || unit.team != visual.team
+                || visual.appearance.as_ref() != desired_appearance
+            {
                 commands.entity(entity).despawn();
                 continue;
             }
@@ -1187,7 +2034,17 @@ fn update_units(
     }
     for unit in battle.world.units.iter().filter(|u| u.hp > 0) {
         if !scratch.existing.contains(&unit.id) {
-            spawn_unit(&mut commands, &assets, unit);
+            spawn_unit(
+                &mut commands,
+                &assets,
+                unit,
+                if unit.kind == UnitKind::Commander && unit.team == Team::Player {
+                    appearance
+                } else {
+                    None
+                },
+                &mut materials,
+            );
         }
     }
     for (relic, mut transform, mut material) in &mut relics {
@@ -1208,6 +2065,115 @@ fn update_hud(
     mut status: Single<&mut Text, (With<StatusLine>, Without<Hud>)>,
     mut help: Single<(&mut Text, &mut Visibility), HelpFilter>,
 ) {
+    if let Some(draft) = &battle.creator {
+        let profile = rpg::class(&draft.class_id).expect("creator class");
+        hud.0 = format!(
+            "{}  ·  {}\nCHARACTER CREATOR  ·  {} CLASS IDENTITIES",
+            draft.name,
+            profile.name,
+            rpg::catalogue().classes.len()
+        );
+        status.0 = "Choose a class, edit your appearance, then begin your journey.\nEDIT NAME: type your name; Backspace removes a character, Ctrl+A clears, Enter finishes.".into();
+        *help.1 = Visibility::Hidden;
+        return;
+    }
+    if let Some(c) = &battle.world.campaign {
+        let hero = battle.world.commander();
+        let health = hero.map_or("FALLEN".into(), |u| format!("{}/{}", u.hp, u.max_hp));
+        hud.0 = format!(
+            "{}  ·  {}  ·  LEVEL {}\n{}   HP {}   FOCUS {}   XP {}/{}   POINTS {}",
+            c.character.name,
+            c.class().name,
+            c.level,
+            rpg::region_name(&c.region),
+            health,
+            c.focus,
+            c.experience,
+            c.next_level_experience(),
+            c.skill_points
+        );
+        let skill = battle
+            .selected_skill()
+            .map_or("No selected skill".into(), |s| {
+                let recovery = c
+                    .cooldowns
+                    .get(&s.id)
+                    .copied()
+                    .unwrap_or(0)
+                    .div_ceil(TICK_HZ);
+                format!(
+                    "{} · {} · {} focus{}",
+                    s.name,
+                    if c.learned.contains(&s.id) {
+                        "LEARNED"
+                    } else {
+                        "UNLEARNED"
+                    },
+                    s.focus_cost,
+                    if recovery > 0 {
+                        format!(" · {recovery}s")
+                    } else {
+                        String::new()
+                    }
+                )
+            });
+        let nearby = battle
+            .nearest_interaction()
+            .map_or(String::new(), |(_, name, distance)| {
+                if distance <= 3_500u64.pow(2) {
+                    format!("J: {name}")
+                } else {
+                    format!("Nearby: {name}")
+                }
+            });
+        status.0 = format!(
+            "{}  |  {}  |  {}\nQUEST: {}\n{}{}",
+            if battle.world.status == MatchStatus::Defeat {
+                "FALLEN · F9 LOAD OR R RESTART"
+            } else if battle.paused {
+                "PAUSED"
+            } else {
+                "THE ASHEN CONCORD"
+            },
+            skill,
+            nearby,
+            c.quest_text(),
+            c.dialogue,
+            if battle.notice_ticks > 0 {
+                format!("\n{}", battle.notice)
+            } else {
+                String::new()
+            }
+        );
+        let (text, visibility) = &mut *help;
+        **visibility =
+            if battle.creator.is_none() && (battle.help || battle.panel != CampaignPanel::Closed) {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            };
+        text.0 = match battle.panel {
+            CampaignPanel::Skills => {
+                let rows = c.class().skills.iter().enumerate().map(|(i, s)| format!("{} {} · {} · level {}{}",
+                    if i == battle.skill_index { ">" } else { " " }, s.name, s.branch, s.minimum_level,
+                    if c.learned.contains(&s.id) { "  [learned]" } else { "" })).collect::<Vec<_>>().join("\n");
+                let selected = battle.selected_skill().map_or(String::new(), |s| format!("\n\n{}\n{}\n{} · {} focus · {}s recovery\nPrerequisite: {}",
+                    s.name, s.description, s.kind, s.focus_cost, s.cooldown_ticks.div_ceil(TICK_HZ),
+                    s.requires.as_ref().and_then(|id| c.class().skills.iter().find(|p| &p.id == id)).map_or("None", |p| p.name.as_str())));
+                format!("{} DISCIPLINES  ·  {} POINTS\n[ / ] select · L learn · Space cast\n\n{}{}\n\nT: retrain freely in Hearthmere. K: close.", c.class().name.to_uppercase(), c.skill_points, rows, selected)
+            }
+            CampaignPanel::Inventory => {
+                let start = battle.item_index / 12 * 12;
+                let rows = c.inventory.iter().enumerate().skip(start).take(12).map(|(i, item)| format!("{} {}\n    {} · {} · power {}{}",
+                    if i == battle.item_index { ">" } else { " " }, item.name, item.rarity, item.slot, item.power,
+                    if c.equipped.get(&item.slot) == Some(&item.id) { " · EQUIPPED" } else { "" })).collect::<Vec<_>>().join("\n");
+                format!("INVENTORY  ·  {} ITEMS\n[ / ] select · U equip · I close\n\n{}\n\nApproach a dropped item and press J to collect it.",
+                    c.inventory.len(), if rows.is_empty() { "Your pack is empty." } else { &rows })
+            }
+            CampaignPanel::Closed => "THE ASHEN CONCORD\n\nCreate a wanderer and follow Maelin's quest.\nAll encounters and progression work solo.\n\nRight-click or WASD moves your hero.\nNearby enemies are attacked automatically.\nSpace casts the selected class skill at the cursor.\n1–6 cast your learned active skills in tree order.\nJ talks, opens caches, collects loot or uses a gate.\n\nK opens disciplines. [ / ] chooses a skill.\nL learns it with an available point.\nI opens inventory; [ / ] selects and U equips.\nT retrains freely in Hearthmere.\nF2 opens the creator; Begin starts a new journey.\n\nQ/E orbit · Wheel zoom · C center\nP pause · R restart journey · F5 save · F9 load\nF12 screenshot · Esc close/exit · F1 close help\n\nPlayable foundation with procedural character art.\nThe full campaign and production class kits\nremain development goals.".into(),
+        };
+        return;
+    }
     let army = battle
         .world
         .units
@@ -1284,6 +2250,26 @@ fn update_hud(
 }
 
 fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>) {
+    if let Some(c) = &battle.world.campaign {
+        for poi in rpg::points_of_interest(&c.region) {
+            gizmos.circle(
+                Isometry3d::new(point3(poi.position, 0.13), Quat::from_rotation_x(FRAC_PI_2)),
+                if poi.kind == "gate" { 2.0 } else { 0.9 },
+                GOLD,
+            );
+        }
+        for loot in &c.ground_loot {
+            gizmos.circle(
+                Isometry3d::new(
+                    point3(loot.position, 0.18),
+                    Quat::from_rotation_x(FRAC_PI_2),
+                ),
+                0.5,
+                TEAL,
+            );
+            gizmos.line(point3(loot.position, 0.2), point3(loot.position, 1.4), GOLD);
+        }
+    }
     for unit in &battle.world.units {
         if unit.hp <= 0 {
             continue;
@@ -1354,7 +2340,7 @@ fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>
     {
         gizmos.circle(
             Isometry3d::new(point3(target, 0.17), Quat::from_rotation_x(FRAC_PI_2)),
-            ABILITY_RADIUS as f32 / 1000.0,
+            battle.selected_skill().map_or(ABILITY_RADIUS, |s| s.radius) as f32 / 1000.0,
             GOLD,
         );
     }
@@ -1418,18 +2404,183 @@ fn smoke_driver(
     mut exit: MessageWriter<AppExit>,
     offscreen: Option<Res<OffscreenTarget>>,
     hud: Query<(&ComputedNode, &ComputedUiTargetCamera), With<Hud>>,
+    buttons: Query<(Entity, &Action)>,
+    creator: Query<&ComputedNode, With<CreatorPanel>>,
 ) {
     cli.frames += 1;
-    if cli.smoke {
+    if cli.campaign_smoke {
+        if battle.creator.is_none() {
+            for _ in 0..if cli.campaign_stage < 4 { 4 } else { 1 } {
+                battle.advance();
+            }
+        }
+        let action = match cli.frames {
+            2 => battle
+                .creator
+                .as_ref()
+                .and_then(|c| {
+                    rpg::catalogue()
+                        .classes
+                        .iter()
+                        .position(|p| p.id == c.class_id)
+                })
+                .map(Action::ChooseClass),
+            4 => Some(Action::Body),
+            6 => Some(Action::HairStyle),
+            92 => Some(Action::Begin),
+            98 => {
+                battle.skill_index = battle
+                    .world
+                    .campaign
+                    .as_ref()
+                    .expect("campaign")
+                    .class()
+                    .skills
+                    .iter()
+                    .position(|s| {
+                        s.kind == "active"
+                            && s.minimum_level == 1
+                            && s.requires.is_none()
+                            && !battle
+                                .world
+                                .campaign
+                                .as_ref()
+                                .expect("campaign")
+                                .learned
+                                .contains(&s.id)
+                    })
+                    .expect("each class needs an alternative starting discipline");
+                Some(Action::Learn)
+            }
+            _ => None,
+        };
+        if let Some(action) = action {
+            let entity = buttons
+                .iter()
+                .find(|(_, a)| **a == action)
+                .expect("real UI action must exist")
+                .0;
+            commands.trigger(Activate { entity });
+        }
+        if cli.frames == 8 {
+            assert!(
+                !creator.single().expect("creator UI").is_empty(),
+                "creator must have a visible computed layout"
+            );
+        }
+        // Warm the real 3D/text pipelines before capturing the creator.
+        if cli.frames == 90 {
+            if let Some(path) = &cli.screenshot {
+                let path = std::path::Path::new(path);
+                let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+                let creator_path = path.with_file_name(format!("{stem}-creator.png"));
+                let capture = if let Some(target) = offscreen.as_ref() {
+                    Screenshot::image(target.0.clone())
+                } else {
+                    Screenshot::primary_window()
+                };
+                commands
+                    .spawn(capture)
+                    .observe(save_to_disk(creator_path))
+                    .observe(|_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
+                        cli.creator_captured = true;
+                    });
+            }
+        }
+        if cli.frames == 100 {
+            battle.skill_index = 0;
+            let target = battle.world.commander().expect("hero").position;
+            battle.cast_selected(target);
+        }
+        if cli.frames == 102 {
+            let id = battle.world.commander().expect("hero").id;
+            battle.command(SimCommand::Move {
+                units: vec![id],
+                target: Point::new(11_500, 18_500),
+                attack_move: false,
+            });
+            cli.campaign_stage = 1;
+        }
+        if cli.frames > 102 {
+            let origin = battle
+                .world
+                .commander()
+                .expect("living smoke hero")
+                .position;
+            match cli.campaign_stage {
+                1 if origin.distance_squared(Point::new(11_500, 18_500)) <= 3_300u64.pow(2) => {
+                    battle.command(SimCommand::Interact {
+                        target: "elder".into(),
+                    });
+                    let id = battle.world.commander().expect("hero").id;
+                    battle.command(SimCommand::Move {
+                        units: vec![id],
+                        target: Point::new(7_500, 25_500),
+                        attack_move: false,
+                    });
+                    cli.campaign_stage = 2;
+                }
+                2 if origin.distance_squared(Point::new(7_500, 25_500)) <= 3_300u64.pow(2) => {
+                    battle.command(SimCommand::Interact {
+                        target: "chest".into(),
+                    });
+                    battle.equip_selected();
+                    let id = battle.world.commander().expect("hero").id;
+                    battle.command(SimCommand::Move {
+                        units: vec![id],
+                        target: Point::new(43_500, 18_500),
+                        attack_move: false,
+                    });
+                    cli.campaign_stage = 3;
+                }
+                3 if origin.distance_squared(Point::new(43_500, 18_500)) <= 3_300u64.pow(2) => {
+                    battle.command(SimCommand::Interact {
+                        target: "moor_gate".into(),
+                    });
+                    cli.campaign_stage = 4;
+                }
+                4 => {
+                    battle.skill_index = battle
+                        .world
+                        .campaign
+                        .as_ref()
+                        .expect("campaign")
+                        .class()
+                        .skills
+                        .iter()
+                        .position(|s| {
+                            s.kind == "active"
+                                && s.id
+                                    != battle
+                                        .world
+                                        .campaign
+                                        .as_ref()
+                                        .expect("campaign")
+                                        .class()
+                                        .skills[0]
+                                        .id
+                                && battle
+                                    .world
+                                    .campaign
+                                    .as_ref()
+                                    .expect("campaign")
+                                    .learned
+                                    .contains(&s.id)
+                        })
+                        .expect("learned second skill");
+                    battle.cast_selected(origin);
+                    cli.campaign_stage = 5;
+                }
+                _ => {}
+            }
+        }
+    } else if cli.smoke {
         battle.advance();
         if cli.frames == 12 {
-            let ids = battle.selected_ids();
+            let units = battle.selected_ids();
             battle.command(SimCommand::Move {
-                units: ids,
-                target: Point {
-                    x: 18_000,
-                    z: 18_000,
-                },
+                units,
+                target: Point::new(18_000, 18_000),
                 attack_move: true,
             });
             battle.command(SimCommand::Recruit {
@@ -1438,34 +2589,37 @@ fn smoke_driver(
         }
         if cli.frames == 70 {
             battle.command(SimCommand::Cast {
-                target: Point {
-                    x: 18_000,
-                    z: 18_000,
-                },
+                target: Point::new(18_000, 18_000),
             });
         }
     }
-    if cli.frames == 90
-        && let Some(path) = cli.screenshot.clone()
-    {
+    let ready = !cli.campaign_smoke || cli.campaign_stage >= 5;
+    if cli.frames >= 90 && ready && !cli.hud_validated {
         let (node, target) = hud.single().expect("smoke must include the game HUD");
         assert!(
             !node.is_empty() && target.get().is_some(),
-            "HUD must have a real camera and a nonzero computed layout"
+            "HUD must have a real camera and nonzero layout"
         );
         cli.hud_validated = true;
-        let capture = if let Some(target) = offscreen {
-            Screenshot::image(target.0.clone())
-        } else {
-            Screenshot::primary_window()
-        };
-        commands.spawn(capture).observe(save_to_disk(path)).observe(
-            |_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
-                cli.captured = true;
-            },
-        );
+        if let Some(path) = cli.screenshot.clone() {
+            let capture = if let Some(target) = offscreen {
+                Screenshot::image(target.0.clone())
+            } else {
+                Screenshot::primary_window()
+            };
+            commands.spawn(capture).observe(save_to_disk(path)).observe(
+                |_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
+                    cli.captured = true;
+                },
+            );
+        }
     }
-    if cli.smoke && cli.frames >= 120 && (cli.screenshot.is_none() || cli.captured) {
+    if cli.smoke
+        && cli.frames >= 120
+        && ready
+        && (cli.screenshot.is_none()
+            || (cli.captured && (!cli.campaign_smoke || cli.creator_captured)))
+    {
         let saved = battle.world.save_json().expect("smoke save serialization");
         let restored = SimWorld::load_json(&saved).expect("smoke save validation");
         assert_eq!(
@@ -1473,10 +2627,31 @@ fn smoke_driver(
             restored.checksum(),
             "save roundtrip must preserve exact state"
         );
-        assert_eq!(
-            battle.command_count, 3,
-            "smoke must issue movement, recruitment and ability"
-        );
+        if cli.campaign_smoke {
+            let c = restored.campaign.as_ref().expect("campaign saved");
+            assert_eq!(
+                c.main_quest, 1,
+                "native interaction must accept the main quest"
+            );
+            assert_eq!(
+                c.region, "hollow_moor",
+                "native interaction must travel between regions"
+            );
+            assert!(
+                c.learned.len() >= 2 && !c.equipped.is_empty(),
+                "native learning and equipment must persist"
+            );
+            assert!(battle.creator.is_none(), "creator must commit to gameplay");
+            assert!(
+                battle.command_count >= 10,
+                "campaign smoke must exercise progression and travel"
+            );
+        } else {
+            assert_eq!(
+                battle.command_count, 3,
+                "legacy smoke must issue movement, recruitment and ability"
+            );
+        }
         assert_eq!(battle.command_failures, 0, "smoke commands must succeed");
         if let Some(path) = &cli.screenshot {
             assert!(
@@ -1485,7 +2660,12 @@ fn smoke_driver(
             );
         }
         println!(
-            "DREADMARCH_RENDER_SMOKE_OK frames={} tick={} units={} checksum={:016x} screenshot_captured={} commands_ok={} save_roundtrip=true hud_validated={}",
+            "{} frames={} tick={} units={} checksum={:016x} screenshot_captured={} commands_ok={} save_roundtrip=true hud_validated={}",
+            if cli.campaign_smoke {
+                "DREADMARCH_CAMPAIGN_RENDER_SMOKE_OK"
+            } else {
+                "DREADMARCH_RENDER_SMOKE_OK"
+            },
             cli.frames,
             battle.world.tick,
             battle.world.units.len(),
@@ -1495,9 +2675,10 @@ fn smoke_driver(
             cli.hud_validated
         );
         exit.write(AppExit::Success);
-    } else if cli.smoke && cli.frames >= 240 {
+    } else if cli.smoke && cli.frames >= if cli.campaign_smoke { 480 } else { 240 } {
         eprintln!(
-            "DREADMARCH_RENDER_SMOKE_FAILED: GPU capture did not finish within the finite render frame budget"
+            "DREADMARCH_RENDER_SMOKE_FAILED: command path or GPU capture exceeded the finite frame budget; campaign_stage={}",
+            cli.campaign_stage
         );
         exit.write(AppExit::error());
     }
@@ -1506,6 +2687,44 @@ fn smoke_driver(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_creator_buttons_commit_class_appearance_and_progression_to_portable_save() {
+        let mut app = App::new();
+        app.insert_resource(Battle::campaign(CharacterCreation::default(), true))
+            .add_observer(activate_button);
+        let warlock = rpg::catalogue()
+            .classes
+            .iter()
+            .position(|c| c.id == "warlock")
+            .unwrap();
+        for action in [
+            Action::ChooseClass(warlock),
+            Action::Body,
+            Action::HairStyle,
+            Action::Begin,
+        ] {
+            let entity = app.world_mut().spawn(action).id();
+            app.world_mut().trigger(Activate { entity });
+        }
+        {
+            let mut battle = app.world_mut().resource_mut::<Battle>();
+            assert!(battle.creator.is_none() && !battle.paused);
+            let c = battle.world.campaign.as_ref().unwrap();
+            assert_eq!(c.character.class_id, "warlock");
+            assert_eq!(c.character.body, "slender");
+            assert_eq!(c.character.hair_style, 1);
+            battle.skill_index = 3;
+        }
+        let entity = app.world_mut().spawn(Action::Learn).id();
+        app.world_mut().trigger(Activate { entity });
+        let battle = app.world().resource::<Battle>();
+        assert_eq!(battle.command_failures, 0);
+        assert_eq!(battle.world.campaign.as_ref().unwrap().learned.len(), 2);
+        let exported = battle.world.save_json().unwrap();
+        let imported = SimWorld::load_json(&exported).unwrap();
+        assert_eq!(battle.world.checksum(), imported.checksum());
+    }
 
     #[test]
     fn real_button_activation_routes_recruitment_pause_and_restart() {

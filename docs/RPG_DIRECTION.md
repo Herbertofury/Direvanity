@@ -14,8 +14,8 @@ combat references. The campaign must work offline and be completable solo, with 
 
 ## Acceptance ledger
 
-- [ ] Source-backed full class and ability research with per-game coverage counts and unresolved gaps.
-- [ ] Original Divine Divinity reimplementation/source-port findings verified against primary projects.
+- [x] Source-backed full class and ability research with per-game coverage counts and unresolved gaps.
+- [x] Original Divine Divinity reimplementation/source-port findings verified against primary projects.
 - [x] Character creator with unrestricted class/body pairing, name, appearance and persistent identity.
 - [x] All verified distinct Diablo class identities available in the design roster, including legacy classes.
 - [x] A coherent skill architecture combining related effects without erasing class identities.

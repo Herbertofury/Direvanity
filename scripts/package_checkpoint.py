@@ -22,13 +22,18 @@ if dirty and not args.allow_dirty:
     raise SystemExit('Uncommitted source changes: checkpoint first or explicitly pass --allow-dirty.')
 source_names = git('ls-files','--cached','--others','--exclude-standard','-z').split('\0')
 files = [(root/name,'source/'+name) for name in sorted(set(source_names)) if name]
-browser = root/'dist/Dreadmarch-playtest.html'
-if not browser.is_file():
-    raise SystemExit('Build the browser playtest with scripts/build_web.py first.')
-files.append((browser,'play/Dreadmarch-playtest.html'))
+for name in ['Dreadmarch-campaign.html', 'Dreadmarch-playtest.html']:
+    browser = root/'dist'/name
+    if not browser.is_file():
+        raise SystemExit('Build both browser modes with scripts/build_web.py first.')
+    files.append((browser,'play/'+name))
 for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-receipt.json',
              'verification.json','spatial-benchmark.json','battle-smoke.json','extracted-native-receipt.json',
-             'browser-live-receipt.json']:
+             'browser-live-receipt.json', 'campaign-build.json', 'rpg-abi-proof.json',
+             'rpg-controls-proof.json', 'rpg-browser-live-receipt.json', 'rpg-rust-tests.log',
+             'rpg-verification.json', 'native-campaign-smoke.png', 'native-campaign-smoke-creator.png',
+             'native-campaign-smoke.log', 'native-campaign-receipt.json',
+             'dreadmarch-campaign-live.jpg', 'dreadmarch-skills-live.jpg', 'research-validation.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 if args.native:
@@ -49,7 +54,8 @@ receipt = {'schema':1,'repository':'https://github.com/Herbertofury/Dreadmarch',
            'pending_changes':dirty.splitlines(),'files':[]}
 guide = ['DREADMARCH - PLAYABLE ENGINE FOUNDATION', '',
          'Play online: https://herbertofury.github.io/Dreadmarch/',
-         'Play offline: open play/Dreadmarch-playtest.html in a modern desktop browser.',
+         'Play offline: open play/Dreadmarch-campaign.html in a modern desktop browser.',
+         'Optional legacy RTS encounter: play/Dreadmarch-playtest.html.',
          'The browser and native clients use the same Rust game simulation.', '',
          'NATIVE PACKAGES']
 for artifact in args.artifact:
@@ -61,12 +67,14 @@ for artifact in args.artifact:
         guide.append('Linux requires glibc 2.35+, X11 runtime libraries and a working graphics driver.')
 if args.native:
     guide.append('Included native executable: play/'+args.native.name)
-guide += ['', 'CONTROLS',
-          'Both: left click/drag to select, right click to move; Shift adds to selection.',
-          'Native: Space targets Soulfire, 1/2 recruit, P pauses, Tab selects the army, F1 opens help.',
-          'Browser: Q targets Soulfire, V/B recruit, Space pauses, A selects the army; open Field manual.',
+guide += ['', 'CAMPAIGN CONTROLS',
+          'Browser: left click to move/interact; right click selected skill; 1-9 select learned skills.',
+          'K/I/J/M open skills/inventory/journal/world; Space pauses; header buttons save/load/export.',
+          'Native: use the creator and in-game control guide; --skirmish opens the legacy RTS.',
+          'Campaign JSON saves are portable between clients; native --load PATH imports one.',
           '', 'SOURCE AND EVIDENCE',
           'Complete source is in source/. Begin with source/README.md and source/docs/STATUS.md.',
+          'Full versioned ability/tree research is in source/data/research/ and source/docs/research/.',
           'The vision and roadmap distinguish the production ambition from this geometric prototype.',
           'verification/ contains the observed test, rendering and package evidence.',
           'CHECKPOINT.json records the source revision and SHA-256 of every included payload.',

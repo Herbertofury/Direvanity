@@ -1,11 +1,11 @@
-name: Publish playable checkpoint
+name: Build verified release packages
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: Unique prerelease tag
         required: true
-        default: v0.1.0-alpha.1
+        default: v0.1.0-alpha.2
 permissions:
   contents: read
 env:
@@ -30,6 +30,8 @@ jobs:
       - run: rustup show
       - name: Verify simulation
         run: cargo test --workspace --exclude dreadmarch-client --locked
+      - name: Native regression tests
+        run: cargo test --locked -p dreadmarch-client
       - name: Build optimized native game
         run: cargo build --locked --release -p dreadmarch-client
       - name: Collect dependency and font notices
@@ -45,17 +47,21 @@ jobs:
           export XDG_RUNTIME_DIR="$(mktemp -d)"
           export WGPU_BACKEND=vulkan
           export LP_NUM_THREADS=2
-          target/release/dreadmarch --smoke-test --screenshot dist/native-smoke.png
+          set -o pipefail
+          target/release/dreadmarch --smoke-test --screenshot dist/native-smoke.png | tee dist/native-smoke.log
+          target/release/dreadmarch --campaign-smoke --screenshot dist/native-campaign-smoke.png | tee dist/native-campaign-smoke.log
       - name: Build shared-simulation browser playtest
         if: runner.os == 'Linux'
         run: |
           python3 scripts/build_web.py
           node tests/web_abi.mjs
           node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+          node tests/rpg_abi.mjs
+          node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
       - name: Package native client
         shell: python
         run: |
-          import pathlib, shutil, zipfile, hashlib
+          import pathlib, shutil, zipfile, hashlib, json, subprocess, re
           root = pathlib.Path('.')
           out = root/'dist'
           out.mkdir(exist_ok=True)
@@ -65,11 +71,29 @@ jobs:
           for path in ['target/release/${{ matrix.binary }}','README.md','LICENSE-MIT','LICENSE-APACHE','THIRD_PARTY.md','dist/THIRD_PARTY_NOTICES.txt']:
               shutil.copy2(path, stage/pathlib.Path(path).name)
           shutil.copytree('docs', stage/'docs', dirs_exist_ok=True)
+          shutil.copytree('data', stage/'data', dirs_exist_ok=True)
+          binary = pathlib.Path('target/release/${{ matrix.binary }}')
+          receipt = {'schema':1, 'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+                     'platform':'${{ matrix.platform }}', 'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),
+                     'binary_bytes':binary.stat().st_size, 'release_tag':'${{ inputs.tag }}'}
+          if '${{ runner.os }}' == 'Linux':
+              symbols = subprocess.check_output(['objdump','-T',str(binary)],text=True)
+              versions = {tuple(map(int,v.split('.'))) for v in re.findall(r'GLIBC_([0-9.]+)',symbols)}
+              required = max(versions)
+              assert required <= (2,39), f'glibc requirement exceeded: {required}'
+              receipt['required_glibc'] = '.'.join(map(str,required))
+              receipt['smoke_log_files'] = ['native-smoke.log','native-campaign-smoke.log']
+          else:
+              receipt['runtime_boundary'] = 'Build and native tests verified; Windows GPU/window runtime not exercised here.'
+          (stage/'BUILD-RECEIPT.json').write_text(json.dumps(receipt,indent=2)+'\n')
           with zipfile.ZipFile(out/(name+'.zip'),'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for path in sorted(stage.rglob('*')):
                   if path.is_file(): z.write(path, name+'/'+str(path.relative_to(stage)))
           package = out/(name+'.zip')
-          (out/(name+'.sha256')).write_text(hashlib.sha256(package.read_bytes()).hexdigest()+'  '+package.name+'\n')
+          digest = hashlib.sha256(package.read_bytes()).hexdigest()
+          (out/(name+'.sha256')).write_text(digest+'  '+package.name+'\n')
+          receipt['package_sha256'] = digest
+          (out/(name+'-receipt.json')).write_text(json.dumps(receipt,indent=2)+'\n')
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: release-${{ matrix.platform }}
@@ -78,24 +102,15 @@ jobs:
             dist/*.sha256
             dist/*.html
             dist/native-smoke.png
+            dist/native-campaign-smoke*.png
+            dist/*smoke.log
+            dist/*receipt.json
             dist/web-build.json
+            dist/campaign-build.json
+            dist/rpg-abi-proof.json
+            dist/rpg-controls-proof.json
             dist/THIRD_PARTY_NOTICES.txt
           if-no-files-found: error
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          pattern: release-*
-          path: artifacts
-          merge-multiple: true
-      - name: Publish exact source checkpoint
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          gh release create "$RELEASE_TAG" artifacts/* --target "$GITHUB_SHA" --prerelease --title "Dreadmarch: first playable foundation" --notes-file docs/RELEASE_NOTES.md
+
+# Publication uses the authenticated repository UI after artifact verification. The previous
+# installation-token release-create route returned HTTP403; do not repeat it or broaden token access.
