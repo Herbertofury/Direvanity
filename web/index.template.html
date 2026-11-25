@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Dreadmarch · The Broken Concord</title>
+<style>__DREAD_CSS__</style>
+</head>
+<body>
+<canvas id="battlefield" aria-label="Battlefield. Drag to select, right click to order. Keyboard controls are listed in the field manual."></canvas>
+<header class="topbar">
+ <div class="brand"><span class="sigil">◇</span><div><h1>DREADMARCH</h1><p>THE BROKEN CONCORD</p></div><span class="build">FIRST LIGHT · 0.1</span></div>
+ <div class="resources"><span class="essence">◆ <strong id="essence">0</strong><small>ESSENCE</small></span><span>⚑ <strong id="army">0</strong><small>YOUR LEGION</small></span><span>◷ <strong id="clock">00:00</strong><small>FIELD TIME</small></span></div>
+ <button id="pause" class="icon-button" title="Pause (Space)">Ⅱ</button>
+</header>
+<aside class="mission panel">
+ <div class="eyebrow">ASHEN FRONTIER / OPERATION I</div><h2>Claim the<br><em>Broken Concord.</em></h2>
+ <p class="lede">Three relics. One commander.<br>Hold the line against the breach.</p>
+ <div id="objectives"></div>
+ <div class="wave"><span id="wave">BREACH 0 / 5</span><strong id="next-wave"></strong><div class="bar"><i id="wave-bar"></i></div></div>
+ <div class="mission-tip">Capture relics with nearby soldiers.<br>Keep your commander alive.</div>
+</aside>
+<aside class="right-stack"><div class="minimap-frame panel"><div class="eyebrow">TACTICAL OVERVIEW</div><canvas id="minimap" width="192" height="144" aria-label="Clickable tactical map"></canvas><button id="fit">FIT BATTLEFIELD <kbd>F</kbd></button></div><div class="field-tools"><button id="save">Save</button><button id="load">Load</button><button id="help">Field manual <kbd>?</kbd></button></div></aside>
+<section id="notice" role="status" aria-live="polite"></section>
+<div class="bottom-wrap">
+ <div class="selection panel"><span class="selection-icon">♜</span><div><span class="eyebrow" id="selection-kind">YOUR LEGION</span><strong id="selected">11 selected</strong><span id="commander-hp">Commander ready</span></div></div>
+ <nav class="commands panel" aria-label="Battle orders">
+  <button id="select-all"><span>⚑</span>Legion<kbd>A</kbd></button><button id="select-hero"><span>♜</span>Commander<kbd>1</kbd></button>
+  <button id="attack-move"><span>↗</span>Advance<small>Attack move</small></button><button id="hold"><span>⛨</span>Hold<kbd>H</kbd></button>
+  <button id="cast" class="spell"><span>✧</span>Soulfire<kbd>Q</kbd><small id="cooldown">READY</small></button>
+  <span class="divider"></span><button id="vanguard"><span>♟</span>Vanguard<kbd>V</kbd><small id="vanguard-cost"></small></button><button id="ranger"><span>⌁</span>Ranger<kbd>B</kbd><small id="ranger-cost"></small></button>
+ </nav>
+ <div class="telemetry"><span class="live-dot"></span><span id="runtime">RUST / WASM</span><span>GEOMETRIC PLAYTEST</span></div>
+</div>
+<div class="gesture-hint">DRAG TO SELECT <span>·</span> RIGHT CLICK TO ORDER <span>·</span> WHEEL TO ZOOM <span>·</span> MIDDLE DRAG TO PAN</div>
+<div id="menu" class="scrim"><section class="dialog intro"><div class="eyebrow">A DARK FANTASY ACTION RTS</div><h2>DREADMARCH</h2><div class="ornament">──── ◇ ────</div><p>Take command.<br>Reclaim the three relics. End the breach.</p><p class="subtle">A playable engine foundation with original geometric visuals.<br>Native and browser clients share the same Rust simulation.</p><button id="deploy" class="primary" disabled>PREPARING THE BATTLEFIELD…</button><small id="loading-status">Loading the embedded Rust engine.</small></section></div>
+<div id="manual" class="scrim hidden"><section class="dialog"><div class="eyebrow">FIELD MANUAL</div><h2>Command the field.</h2><dl><dt>Left click / drag</dt><dd>Select units. Shift adds to your selection.</dd><dt>Right click</dt><dd>Move in formation. Advance mode engages enemies along the route.</dd><dt>A / 1</dt><dd>Select your legion / your commander.</dd><dt>Q, then left click</dt><dd>Soulfire: damage nearby enemies and heal allies. Cast within commander range.</dd><dt>V / B</dt><dd>Recruit a vanguard / ranger using essence.</dd><dt>H / Space</dt><dd>Hold position / pause the battle.</dd><dt>Wheel / middle drag / F</dt><dd>Zoom / pan / fit the battlefield.</dd><dt>Save / Load</dt><dd>Preserve the complete match in this browser. Invalid saves are rejected.</dd></dl><p class="subtle">Capture all three relics and defeat the fifth wave. Losing your commander ends the battle. Captured relics generate essence. The first build uses geometric art; the production quality goals remain ahead.</p><button id="close-help" class="primary">BACK TO THE FIELD</button><button id="restart" class="quiet">Restart encounter</button></section></div>
+<div id="result" class="scrim hidden"><section class="dialog"><div class="eyebrow">THE BROKEN CONCORD</div><h2 id="result-title"></h2><p id="result-copy"></p><button id="play-again" class="primary">COMMAND AGAIN</button><button id="view-field" class="quiet">Inspect battlefield</button></section></div>
+<script>const DREAD_WASM_BASE64="__DREAD_WASM_BASE64__";</script>
+<script>__DREAD_JS__</script>
+</body></html>

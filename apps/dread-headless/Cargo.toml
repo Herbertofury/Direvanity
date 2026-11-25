@@ -1,0 +1,10 @@
+[package]
+name = "dread-headless"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+dread-sim.workspace = true
+dread-core.workspace = true
+serde_json.workspace = true

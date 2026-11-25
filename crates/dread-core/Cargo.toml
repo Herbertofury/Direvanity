@@ -1,0 +1,12 @@
+[package]
+name = "dread-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Renderer-independent deterministic spatial primitives for Rust games"
+
+[dependencies]
+serde.workspace = true
+

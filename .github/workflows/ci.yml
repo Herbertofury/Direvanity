@@ -1,0 +1,60 @@
+name: Engine and game checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 3
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: Swatinem/rust-cache@v2.9.3
+      - name: Install pinned toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Simulation, ABI and independent engine tests
+        run: cargo test --workspace --exclude dreadmarch-client --locked
+      - name: Deterministic full battle
+        run: cargo run --locked -p dread-sim --example battle_smoke
+      - name: Replay and save verification
+        run: cargo run --locked -p dread-headless -- --verify
+      - name: Independent engine consumer
+        run: cargo run --locked -p engine-lab
+      - name: Compile browser playtest
+        run: python3 scripts/build_web.py
+      - name: Real WebAssembly integration
+        run: node tests/web_abi.mjs
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: Dreadmarch-browser-playtest
+          path: |
+            dist/Dreadmarch-playtest.html
+            dist/web-build.json
+          if-no-files-found: error
+  native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: Swatinem/rust-cache@v2.9.3
+      - name: Install pinned toolchain
+        run: rustup show
+      - name: Check current native APIs and all targets
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Native regression tests
+        run: cargo test --locked -p dreadmarch-client
+      - name: Native build
+        run: cargo build --locked -p dreadmarch-client
