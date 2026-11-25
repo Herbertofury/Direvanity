@@ -53,16 +53,19 @@ python3 scripts/build_web.py
 
 ### Controls
 
-| Action | Input |
-| --- | --- |
-| Select / box select | Left click / left drag; Shift adds |
-| Move squads | Right click |
-| Commander ability | Q, then choose a target |
-| Recruit vanguard / ranger | V / B, or the action buttons |
-| Pause / resume | Space |
-| Save / load | F5 / F9 in native; Save / Load in browser |
-| Native camera | WASD/arrows, wheel zoom; see in-game help |
-| Browser camera | Wheel zoom, middle drag, F to fit |
+| Action | Native 3D | Browser playtest |
+| --- | --- | --- |
+| Select / box select | Left click / left drag; Shift adds | Left click / left drag; Shift adds |
+| Move squads | Right click; Shift-right-click to attack-move | Right click |
+| Commander ability | Space, then choose a target | Q, then choose a target |
+| Recruit vanguard / ranger | 1 / 2, or the action buttons | V / B, or the action buttons |
+| Select army / commander | Tab / C | A / 1 |
+| Hold position | H | H |
+| Pause / resume | P | Space |
+| Restart | R | Restart button |
+| Save / load | F5 / F9 | Save / Load buttons |
+| Camera | WASD pan, Q/E orbit, wheel zoom | Wheel zoom, middle drag, F to fit |
+| Field manual | F1 | Help button |
 
 The clients' field manuals describe their selection shortcuts and camera details.
 
@@ -97,6 +100,7 @@ cargo build -p dreadmarch-client
 cargo run -p dreadmarch-client -- --smoke-test --screenshot dist/native-smoke.png
 python3 scripts/build_web.py
 node tests/web_abi.mjs
+node tests/web_controls.mjs dist/Dreadmarch-playtest.html
 ```
 
 The native smoke test renders offscreen using the actual GPU pipeline, applies real gameplay

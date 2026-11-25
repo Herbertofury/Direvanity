@@ -5,15 +5,15 @@ in STATUS.md. “Supported by Bevy” does not mean “integrated in Dreadmarch.
 
 ## M0: playable engine foundation
 
-- [ ] Public source repository and current pinned Rust/Bevy toolchain
-- [ ] Renderer-independent integer simulation, deterministic commands and checksums
-- [ ] Generic navigation and spatial-query engine crate, independent consumer example
-- [ ] Commander, two squad types, enemy types, combat, recruitment, three capture sites
-- [ ] Wave pressure, victory, defeat, restart, selection and movement
-- [ ] Native 3D Bevy client running the actual simulation
-- [ ] Browser playtest compiled from the same Rust simulation
-- [ ] Versioned validated save/load and deterministic replay verification
-- [ ] Reproducible build/test workflow and downloadable checkpoint
+- [x] Public source repository and current pinned Rust/Bevy toolchain
+- [x] Renderer-independent integer simulation, deterministic commands and checksums
+- [x] Generic navigation and spatial-query engine crate, independent consumer example
+- [x] Commander, two squad types, enemy types, combat, recruitment, three capture sites
+- [x] Wave pressure, victory, defeat, restart, selection and movement
+- [x] Native 3D Bevy client running the actual simulation
+- [x] Browser playtest compiled from the same Rust simulation
+- [x] Versioned validated save/load and deterministic replay verification
+- [x] Reproducible build/test workflow and downloadable checkpoint
 
 ## M1: combat and navigation vertical slice
 

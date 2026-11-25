@@ -10,6 +10,8 @@ import zipfile
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--native', type=Path)
+parser.add_argument('--artifact', type=Path, action='append', default=[],
+                    help='Explicit release artifact to include under release/; repeat for each ZIP or checksum file.')
 parser.add_argument('--allow-dirty', action='store_true')
 parser.add_argument('--output', type=Path, default=root/'dist/Dreadmarch-checkpoint.zip')
 args = parser.parse_args()
@@ -24,13 +26,23 @@ browser = root/'dist/Dreadmarch-playtest.html'
 if not browser.is_file():
     raise SystemExit('Build the browser playtest with scripts/build_web.py first.')
 files.append((browser,'play/Dreadmarch-playtest.html'))
-for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-receipt.json','verification.json']:
+for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-receipt.json',
+             'verification.json','spatial-benchmark.json','battle-smoke.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 if args.native:
     native = args.native.resolve()
     if not native.is_file(): raise SystemExit('Native binary is missing.')
     files.append((native,'play/'+native.name))
+for artifact in args.artifact:
+    artifact = artifact.resolve()
+    if not artifact.is_file(): raise SystemExit(f'Release artifact is missing: {artifact}')
+    files.append((artifact,'release/'+artifact.name))
+archive_names = set()
+for _, name in files:
+    if name in archive_names:
+        raise SystemExit(f'Archive name collision: {name}')
+    archive_names.add(name)
 receipt = {'schema':1,'repository':'https://github.com/Herbertofury/Dreadmarch',
            'source_commit':git('rev-parse','HEAD'),'dirty_source':bool(dirty),
            'pending_changes':dirty.splitlines(),'files':[]}
@@ -38,8 +50,13 @@ args.output.parent.mkdir(parents=True,exist_ok=True)
 with zipfile.ZipFile(args.output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
     for path,name in files:
         data=path.read_bytes()
-        archive.writestr(name,data)
-        receipt['files'].append({'path':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+        # Passing only a name to writestr discards executable permissions. Keep
+        # filesystem metadata while hashing the exact bytes written to the ZIP.
+        info = zipfile.ZipInfo.from_file(path,arcname=name)
+        archive.writestr(info,data,compress_type=zipfile.ZIP_DEFLATED,compresslevel=9)
+        receipt['files'].append({'path':name,'bytes':len(data),
+                                 'sha256':hashlib.sha256(data).hexdigest(),
+                                 'unix_mode':format((info.external_attr >> 16) & 0o7777,'04o')})
     archive.writestr('CHECKPOINT.json',json.dumps(receipt,indent=2)+'\n')
 with zipfile.ZipFile(args.output) as archive:
     if archive.testzip() is not None: raise SystemExit('Archive integrity check failed.')

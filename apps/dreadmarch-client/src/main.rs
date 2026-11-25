@@ -2,7 +2,7 @@
 //! All geometry and visual effects below are original procedural game assets.
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
-    camera::{RenderTarget, ScalingMode},
+    camera::{RenderTarget, ScalingMode, ShadowLodOrigin},
     input::mouse::MouseWheel,
     picking::hover::Hovered,
     post_process::bloom::Bloom,
@@ -11,14 +11,14 @@ use bevy::{
         render_resource::{TextureFormat, TextureUsages},
         view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
     },
-    ui::Pressed,
+    ui::{IsDefaultUiCamera, Pressed},
     ui_widgets::{Activate, Button as UiButton},
     window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
 };
 use dread_sim::{
     ABILITY_RADIUS, CAPTURE_RADIUS, CAPTURE_TICKS, Command as SimCommand, MatchStatus, Point,
-    SimEvent, TICK_HZ, Team, UnitKind, World as SimWorld,
+    SimEvent, TICK_HZ, TOTAL_WAVES, Team, UnitKind, World as SimWorld,
 };
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI};
@@ -155,6 +155,7 @@ struct Cli {
     screenshot: Option<String>,
     frames: u32,
     captured: bool,
+    hud_validated: bool,
 }
 #[derive(Resource)]
 struct OffscreenTarget(Handle<Image>);
@@ -193,6 +194,8 @@ struct MainCamera;
 #[derive(Component)]
 struct UnitVisual {
     id: u32,
+    kind: UnitKind,
+    team: Team,
     previous: Vec3,
     current: Vec3,
     tick: u64,
@@ -210,6 +213,7 @@ struct Hud;
 struct StatusLine;
 #[derive(Component)]
 struct HelpText;
+type HelpFilter = (With<HelpText>, Without<Hud>, Without<StatusLine>);
 #[derive(Component)]
 struct DragRect;
 #[derive(Component, Clone, Copy)]
@@ -557,6 +561,8 @@ fn setup_scene(
     commands.spawn((
         MainCamera,
         Camera3d::default(),
+        IsDefaultUiCamera,
+        ShadowLodOrigin,
         render_target,
         Projection::from(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
@@ -640,8 +646,8 @@ fn setup_ui(mut commands: Commands) {
     commands.spawn((Node { position_type:PositionType::Absolute, bottom:px(0), left:px(0), right:px(0), min_height:px(138), padding:UiRect::all(px(18)), flex_direction:FlexDirection::Column, row_gap:px(12), ..default() }, BackgroundColor(UI_BG))).with_children(|parent| {
         parent.spawn((StatusLine, label("", 15.0, TEAL)));
         parent.spawn(Node { column_gap:px(8), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() }).with_children(|p| {
-            for (text, action) in [("1  VANGUARD",Action::Vanguard),("2  RANGER",Action::Ranger),("SPACE  SOULFIRE",Action::Spell),("TAB  ARMY",Action::Army),("H  HOLD",Action::Hold),("P  PAUSE",Action::Pause),("R  RESTART",Action::Restart),("F1  HELP",Action::Help)] {
-                p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(14),px(11)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(text,13.0,GOLD));
+            for (text, action) in [(format!("1  VANGUARD  {}", UnitKind::Vanguard.stats().recruitment_cost.unwrap_or(0)),Action::Vanguard),(format!("2  RANGER  {}", UnitKind::Ranger.stats().recruitment_cost.unwrap_or(0)),Action::Ranger),("SPACE  SOULFIRE".into(),Action::Spell),("TAB  ARMY".into(),Action::Army),("H  HOLD".into(),Action::Hold),("P  PAUSE".into(),Action::Pause),("R  RESTART".into(),Action::Restart),("F1  HELP".into(),Action::Help)] {
+                p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(14),px(11)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(&text,13.0,GOLD));
             }
         });
         parent.spawn(label("LEFT / DRAG select   |   RIGHT move   |   SHIFT + RIGHT attack-move   |   WASD pan   Q/E orbit   WHEEL zoom   |   F5 save   F9 load", 11.0, Color::srgb(0.54, 0.64, 0.65)));
@@ -733,19 +739,18 @@ fn keyboard_input(
     if keys.just_pressed(KeyCode::Tab) {
         battle.all_army();
     }
-    if keys.just_pressed(KeyCode::KeyC) {
-        if let Some(unit) = battle
+    if keys.just_pressed(KeyCode::KeyC)
+        && let Some(unit) = battle
             .world
             .units
             .iter()
             .find(|u| u.kind == UnitKind::Commander && u.hp > 0)
-        {
-            let id = unit.id;
-            let pos = point3(unit.position, 0.0);
-            battle.selected.clear();
-            battle.selected.insert(id);
-            orbit.focus = pos;
-        }
+    {
+        let id = unit.id;
+        let pos = point3(unit.position, 0.0);
+        battle.selected.clear();
+        battle.selected.insert(id);
+        orbit.focus = pos;
     }
     if keys.just_pressed(KeyCode::KeyP) {
         battle.paused = !battle.paused;
@@ -770,10 +775,10 @@ fn keyboard_input(
         let ids = battle.selected_ids();
         battle.command(SimCommand::Hold { units: ids });
     }
-    if keys.just_pressed(KeyCode::Space) {
-        if let Some(target) = battle.cursor_world {
-            battle.command(SimCommand::Cast { target });
-        }
+    if keys.just_pressed(KeyCode::Space)
+        && let Some(target) = battle.cursor_world
+    {
+        battle.command(SimCommand::Cast { target });
     }
     if keys.just_pressed(KeyCode::F5) {
         match battle.world.save_json() {
@@ -871,27 +876,29 @@ fn pointer_input(
             let mut chosen = Vec::new();
             if start.distance(cursor) > 7.0 {
                 for unit in &battle.world.units {
-                    if unit.team == Team::Player && unit.hp > 0 {
-                        if let Ok(p) =
+                    if unit.team == Team::Player
+                        && unit.hp > 0
+                        && let Ok(p) =
                             camera.world_to_viewport(transform, point3(unit.position, 0.5))
-                        {
-                            if p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y {
-                                chosen.push(unit.id);
-                            }
-                        }
+                        && p.x >= min.x
+                        && p.x <= max.x
+                        && p.y >= min.y
+                        && p.y <= max.y
+                    {
+                        chosen.push(unit.id);
                     }
                 }
             } else {
                 let mut nearest = (22.0_f32, None);
                 for unit in &battle.world.units {
-                    if unit.team == Team::Player && unit.hp > 0 {
-                        if let Ok(p) =
+                    if unit.team == Team::Player
+                        && unit.hp > 0
+                        && let Ok(p) =
                             camera.world_to_viewport(transform, point3(unit.position, 0.5))
-                        {
-                            let d = p.distance(cursor);
-                            if d < nearest.0 {
-                                nearest = (d, Some(unit.id));
-                            }
+                    {
+                        let d = p.distance(cursor);
+                        if d < nearest.0 {
+                            nearest = (d, Some(unit.id));
                         }
                     }
                 }
@@ -993,6 +1000,8 @@ fn spawn_unit(commands: &mut Commands, assets: &VisualAssets, unit: &dread_sim::
         .spawn((
             UnitVisual {
                 id: unit.id,
+                kind: unit.kind,
+                team: unit.team,
                 previous: point3(unit.position, 0.08),
                 current: point3(unit.position, 0.08),
                 tick: 0,
@@ -1118,9 +1127,7 @@ fn update_units(
     mut commands: Commands,
     assets: Res<VisualAssets>,
     battle: Res<Battle>,
-    time: Res<Time>,
-    fixed: Res<Time<Fixed>>,
-    cli: Res<Cli>,
+    (time, fixed, cli): (Res<Time>, Res<Time<Fixed>>, Res<Cli>),
     mut scratch: Local<RenderScratch>,
     mut visuals: Query<(Entity, &mut UnitVisual, &mut Transform)>,
     mut relics: Query<
@@ -1152,11 +1159,17 @@ fn update_units(
     for (entity, mut visual, mut transform) in &mut visuals {
         if let Some(&index) = scratch.indices.get(&visual.id) {
             let unit = &battle.world.units[index];
+            // A restored save may reuse an ID for a different recruited class.
+            // Recreate its presentation rather than retaining an obsolete mesh.
+            if unit.kind != visual.kind || unit.team != visual.team {
+                commands.entity(entity).despawn();
+                continue;
+            }
             scratch.existing.insert(unit.id);
             let desired = point3(unit.position, 0.08);
             let delta = desired - visual.current;
-            if visual.tick != battle.world.tick {
-                visual.previous = if battle.world.tick < visual.tick {
+            if visual.tick != battle.world.tick || desired != visual.current {
+                visual.previous = if battle.world.tick <= visual.tick {
                     desired
                 } else {
                     visual.current
@@ -1193,10 +1206,7 @@ fn update_hud(
     battle: Res<Battle>,
     mut hud: Single<&mut Text, With<Hud>>,
     mut status: Single<&mut Text, (With<StatusLine>, Without<Hud>)>,
-    mut help: Single<
-        (&mut Text, &mut Visibility),
-        (With<HelpText>, Without<Hud>, Without<StatusLine>),
-    >,
+    mut help: Single<(&mut Text, &mut Visibility), HelpFilter>,
 ) {
     let army = battle
         .world
@@ -1217,14 +1227,24 @@ fn update_hud(
         .filter(|o| o.captured)
         .count();
     let cooldown = battle.world.commander_cooldown.div_ceil(TICK_HZ);
+    let next_wave = if battle.world.wave < TOTAL_WAVES {
+        format!(
+            "NEXT {}s",
+            battle.world.wave_ticks_remaining.div_ceil(TICK_HZ)
+        )
+    } else {
+        "FINAL WAVE".into()
+    };
     hud.0 = format!(
-        "ESSENCE {}     ARMY {}     HOSTILES {}\nRELICS {}/{}     WAVE {}     KILLS {}",
+        "ESSENCE {}     ARMY {}     HOSTILES {}\nRELICS {}/{}     WAVE {}/{}     {}     KILLS {}",
         battle.world.economy.essence,
         army,
         enemy,
         captured,
         battle.world.objectives.len(),
         battle.world.wave,
+        TOTAL_WAVES,
+        next_wave,
         battle.world.economy.kills
     );
     let state = match battle.world.status {
@@ -1260,7 +1280,7 @@ fn update_hud(
     } else {
         Visibility::Hidden
     };
-    text.0="COMMAND THE HOLLOW MARCH\n\nSecure all three ancient relics and survive the invasion.\nKeep the commander alive; losing them ends the match.\n\nLeft-click a warrior, or drag to select a squad.\nShift adds to your selection. Tab selects the army.\nRight-click moves in formation. Shift + right-click\norders an attack-move. H stops the selected squad.\nC selects and centers the commander.\n\nSpace casts Soulfire at the cursor. The button lets\nyou choose the target with your next click.\n1 recruits a Vanguard. 2 recruits a Ranger.\n\nWASD pan / Q E orbit / Wheel zoom\nP pause / R restart / F5 save / F9 load\nF12 screenshot / Esc exit / F1 close help\n\nFoundation playtest: original procedural geometry.\nProduction art, audio, campaign and netcode remain\ntracked in the repository roadmap.".into();
+    text.0="COMMAND THE HOLLOW MARCH\n\nSecure all three ancient relics and survive five waves.\nKeep the commander alive; losing them ends the match.\n\nLeft-click a warrior, or drag to select a squad.\nShift adds to your selection. Tab selects the army.\nRight-click moves in formation. Shift + right-click\norders an attack-move. H stops the selected squad.\nC selects and centers the commander.\n\nSpace casts Soulfire at the cursor. The button lets\nyou choose the target with your next click.\n1 recruits a Vanguard. 2 recruits a Ranger.\n\nWASD pan / Q E orbit / Wheel zoom\nP pause / R restart / F5 save / F9 load\nF12 screenshot / Esc exit / F1 close help\n\nFoundation playtest: original procedural geometry.\nProduction art, audio, campaign and netcode remain\ntracked in the repository roadmap.".into();
 }
 
 fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>) {
@@ -1329,14 +1349,14 @@ fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>
             }
         }
     }
-    if battle.cast_mode {
-        if let Some(target) = battle.cursor_world {
-            gizmos.circle(
-                Isometry3d::new(point3(target, 0.17), Quat::from_rotation_x(FRAC_PI_2)),
-                ABILITY_RADIUS as f32 / 1000.0,
-                GOLD,
-            );
-        }
+    if battle.cast_mode
+        && let Some(target) = battle.cursor_world
+    {
+        gizmos.circle(
+            Isometry3d::new(point3(target, 0.17), Quat::from_rotation_x(FRAC_PI_2)),
+            ABILITY_RADIUS as f32 / 1000.0,
+            GOLD,
+        );
     }
     if let Some((pos, remaining)) = &mut battle.order_marker {
         *remaining -= time.delta_secs();
@@ -1397,6 +1417,7 @@ fn smoke_driver(
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
     offscreen: Option<Res<OffscreenTarget>>,
+    hud: Query<(&ComputedNode, &ComputedUiTargetCamera), With<Hud>>,
 ) {
     cli.frames += 1;
     if cli.smoke {
@@ -1424,19 +1445,25 @@ fn smoke_driver(
             });
         }
     }
-    if cli.frames == 90 {
-        if let Some(path) = cli.screenshot.clone() {
-            let capture = if let Some(target) = offscreen {
-                Screenshot::image(target.0.clone())
-            } else {
-                Screenshot::primary_window()
-            };
-            commands.spawn(capture).observe(save_to_disk(path)).observe(
-                |_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
-                    cli.captured = true;
-                },
-            );
-        }
+    if cli.frames == 90
+        && let Some(path) = cli.screenshot.clone()
+    {
+        let (node, target) = hud.single().expect("smoke must include the game HUD");
+        assert!(
+            !node.is_empty() && target.get().is_some(),
+            "HUD must have a real camera and a nonzero computed layout"
+        );
+        cli.hud_validated = true;
+        let capture = if let Some(target) = offscreen {
+            Screenshot::image(target.0.clone())
+        } else {
+            Screenshot::primary_window()
+        };
+        commands.spawn(capture).observe(save_to_disk(path)).observe(
+            |_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
+                cli.captured = true;
+            },
+        );
     }
     if cli.smoke && cli.frames >= 120 && (cli.screenshot.is_none() || cli.captured) {
         let saved = battle.world.save_json().expect("smoke save serialization");
@@ -1458,13 +1485,14 @@ fn smoke_driver(
             );
         }
         println!(
-            "DREADMARCH_RENDER_SMOKE_OK frames={} tick={} units={} checksum={:016x} screenshot_captured={} commands_ok={} save_roundtrip=true",
+            "DREADMARCH_RENDER_SMOKE_OK frames={} tick={} units={} checksum={:016x} screenshot_captured={} commands_ok={} save_roundtrip=true hud_validated={}",
             cli.frames,
             battle.world.tick,
             battle.world.units.len(),
             battle.world.checksum(),
             cli.captured,
-            battle.command_count
+            battle.command_count,
+            cli.hud_validated
         );
         exit.write(AppExit::Success);
     } else if cli.smoke && cli.frames >= 240 {
@@ -1478,6 +1506,30 @@ fn smoke_driver(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn real_button_activation_routes_recruitment_pause_and_restart() {
+        let mut app = App::new();
+        app.insert_resource(Battle::default())
+            .add_observer(activate_button);
+        let recruit = app.world_mut().spawn(Action::Ranger).id();
+        let pause = app.world_mut().spawn(Action::Pause).id();
+        let restart = app.world_mut().spawn(Action::Restart).id();
+        let before = app.world().resource::<Battle>().world.economy.essence;
+        app.world_mut().trigger(Activate { entity: recruit });
+        assert_eq!(
+            app.world().resource::<Battle>().world.economy.essence,
+            before - UnitKind::Ranger.stats().recruitment_cost.unwrap()
+        );
+        app.world_mut().trigger(Activate { entity: pause });
+        assert!(app.world().resource::<Battle>().paused);
+        app.world_mut().trigger(Activate { entity: restart });
+        assert!(!app.world().resource::<Battle>().paused);
+        assert_eq!(
+            app.world().resource::<Battle>().world.checksum(),
+            SimWorld::new(SEED).checksum()
+        );
+    }
 
     #[test]
     fn surviving_squad_can_still_receive_orders_after_a_selected_unit_dies() {
