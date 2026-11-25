@@ -41,7 +41,7 @@ for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
              'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg',
              'dreadmarch-skills-live.jpg', 'dreadmarch-completed-journal.jpg',
              'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json',
-             'direvanity-verification.json', 'production-plan-validation.json', 'direvanity-live-browser.png', 'direvanity-creator.png', 'direvanity-world.png', 'direvanity-journal.png']:
+             'direvanity-verification.json', 'release-direvanity/release-validation.json', 'production-plan-validation.json', 'direvanity-live-browser.png', 'direvanity-creator.png', 'direvanity-world.png', 'direvanity-journal.png']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 # Preserve optimized CI and freshly extracted-package evidence under their
@@ -49,7 +49,7 @@ for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
 for folder in ['qa', 'release-direvanity/linux-ci', 'release-direvanity/windows-ci',
                'release-direvanity/extracted-runtime']:
     for path in sorted((root/'dist'/folder).glob('*')):
-        if path.is_file() and path.suffix in {'.json', '.log', '.png'}:
+        if path.is_file() and path.suffix in {'.json', '.log', '.png', '.jpg'}:
             files.append((path, 'verification/'+folder+'/'+path.name))
 if args.native:
     native = args.native.resolve()

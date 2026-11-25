@@ -1,39 +1,124 @@
 # Development environment recovery
 
-## Current RPG continuation — 25 November 2026
+## Current Direvanity continuation · 25 November 2026
 
-Resume from [STATUS.md](STATUS.md), [RPG_DIRECTION.md](RPG_DIRECTION.md) and
-[CLASS_SYNTHESIS.md](CLASS_SYNTHESIS.md). The primary product is an offline single-player ARPG.
-The legacy RTS is an optional regression scenario. The older records below preserve environment
-repairs and alpha.1 provenance; they are not the current product milestone or release binaries.
+Resume from [STATUS.md](STATUS.md) and the identities below. This is the expanded offline single-player
+ARPG; the legacy RTS remains a separate regression scenario. Preserve all 19 classes, 174 prototype
+nodes, existing saves and committed research. Do not restart the earlier prologue-only or RTS milestone.
 
-- Public release: `v0.1.0-alpha.2`, tag commit `e4a6e9c971ead55ecc2569fb1d931f33a3522eb6`.
-- Tested Rust/native source: `a96d473d834dac66b0c0f0977300ed6dca45899e`.
-- Final browser text/deployment source: `f1e52718899cc621177bf84420a64cbf75910903`.
-- Full CI: `45657960569`; optimized release: `45657992875`; final Pages: `45660608035`.
-- Nineteen classes, 174 original nodes and three persistent regions are implemented. Full versioned
-  research catalogues and their coverage boundaries are already committed; do not redo that inventory.
-- Actual browser main/side-quest playthrough, all 19 public-command campaign playthroughs, native
-  creator/campaign rendering and freshly extracted optimized Linux execution have passed.
-- Current Linux binary: `95755e96f4e10b025de6ae011b90cc3769f2f9c04685861c7f9305e42b4840c4`.
-- Current Windows binary: `ebcf6ca79a6f4c87b872c02d07ecd47da9e6411a12c614914f8cd7fe46683349`.
-- Windows text was restored from exact Git blobs after CRLF checkout conversion; binary identity
-  was preserved. Its distribution receipt retains the original CI artifact/package hashes.
-- `CHECKPOINT.json` records the exact complete-archive source revision. The release asset
-  `Dreadmarch-delivery.json` records independent archive validation and post-transfer full readback.
+### Canonical state
 
-**Exact next implementation boundary:** R1's typed ability timeline and one complete class combat
-loop in an authored region, then the contrasting-class vertical slice. Implement real targeting,
-windup/commit/recovery, projectile/chain delivery, class resources and signature mechanics; preserve
-all 19 creator choices and extend each class through explicit coverage tasks. Original rigged art,
-branching quests, itemization and hardware performance remain production work. Do not restart an
-RTS-first milestone or treat procedural visuals as finished production quality.
+| Item | Verified identity |
+| --- | --- |
+| Repository | `https://github.com/Herbertofury/Dreadmarch` |
+| Working directory | `/workspace/scratch/21e05b9e458e/Direvanity` |
+| Implementation commit | `40deec9f9108f3494703e3f0e5c994ef63a191e0` |
+| Merged main commit | `c7a76ab62cb6c0adfd00703bd80217ea60dd5b3d` |
+| Both commits' implementation tree | `a5591ad20f1131d87fe48a26efb5b3a9349411a8` |
+| Pull request | `https://github.com/Herbertofury/Dreadmarch/pull/4`, merged |
+| Full CI | `45708059241`, all three jobs passed |
+| Pages deployment | `45708530418`, build and deploy passed at the merge revision |
+| Live game | `https://herbertofury.github.io/Dreadmarch/` |
+| Optimized release build | `45708000312`, both platforms passed at the implementation commit |
+| Published prerelease | `https://github.com/Herbertofury/Dreadmarch/releases/tag/v0.2.0-alpha.1`; release `458757949`, tag at the implementation commit |
 
-Use `source /workspace/scratch/f01d9d0c81e4/toolchain/env.sh` for the restored local Rust toolchain.
-The scoped Vulkan environment below remains valid while its files and host are unchanged. Download
-CI artifacts through the dedicated GitHub artifact-download operation, then verify the provider and
-inner-package digests. Do not repeat the blocked browser artifact handoff, the installation-token
-release-create HTTP403 route, or the unchanged Xvfb/AF_UNIX failure.
+The current implementation contains two playable chapter loops, six fixed regions, four side quests
+and one repeatable expedition region. The 12-act/36-region-group/48-arc production catalogue and its
+100+ hour categories are unvalidated authoring estimates, not shipped hours or finished AAA production.
+
+### Completed work: do not repeat without a relevant change
+
+- Final local formatting, 45 Rust tests and strict workspace/all-target Clippy passed; CI is green.
+- All 19 classes completed both chapters and all four side quests: 76 side-quest instances,
+  57 expeditions, every objective and modifier 19 times, 259,620 total ticks including prologue ticks.
+- Three additional earned-save combat runs verify modifier effects. Numeric-boundary valid saves,
+  malformed progression rejection and nonfinite planning targets are covered.
+- Browser structural controls passed 23 cases, including exact earned-save imports. Live browser
+  interaction separately verified class resources, casting/cooldowns, learned companion, pause,
+  atlas/local map/navigation, recovered loot/equipment/search/sort, journal, save/reload and motion.
+- Final development native binary passed actual campaign and legacy rendering, save and HUD checks.
+- Both optimized platform artifacts were downloaded, matched to provider and package hashes,
+  safely extracted, and reconciled with 25 complete bundled project data/documentation files per platform.
+- The exact freshly extracted optimized Linux binary passed campaign and legacy runtime gates;
+  all three captures were reviewed. No local rebuild replaced the CI executable.
+- The `v0.2.0-alpha.1` prerelease is published, not a draft. All six uploaded release assets have
+  provider SHA-256 digests and sizes matching the verified local bytes. Exact asset identities are in
+  `dist/qa/release-publication.json`; do not upload the same unchanged assets again.
+- Existing research inventories are committed. Reuse their IDs, paths and coverage boundaries.
+
+The six browser screenshots are retained as `dist/qa/direvanity-*.jpg`. The late-campaign browser
+file-chooser import stalled and was interrupted; no live-browser visual completion is claimed for
+those three fixture imports. Their structural real-WASM import proof remains valid. Do not repeat
+an unchanged stalled picker call or claim screenshots that were not captured.
+
+### Exact package and runtime checkpoint
+
+Release artifact IDs are Linux `15065184844` and Windows `15067410496`; jobs are Linux `139534824643`
+and Windows `139534824307`. Full receipts are under `dist/release-direvanity/`:
+
+- `release-validation.json`: both platforms and independent runtime summary.
+- `linux-ci/outer/Direvanity-linux-x64.zip`: package SHA-256
+  `99d6a69077b16f63b29e017f0ff3c911d17b907280d086c44ecfa5379a58f3a8`.
+- `windows-ci/outer/Direvanity-windows-x64.zip`: package SHA-256
+  `9dc763ec6e5e834f18c333ed3aed52cd1b754740ad13bd6ad8626701b25f67ec`.
+- Linux binary SHA-256: `4c0a0310ff519e6aefb198a4a964f0d2c54f32f7608d4a112133bc103c512c1f`.
+- Windows binary SHA-256: `170cf8c39352c331d990735d0984186388def3d9399b37c9c4b22019bc8e1f60`.
+- `extracted-runtime/optimized-runtime-proof.json`: campaign exit 0, 185 frames / tick 354,
+  ten commands, checksum `6ca474ed5e8d0a66`; legacy exit 0, 120 frames / tick 120, three commands,
+  checksum `4d08544a95f6c631`. Both match CI state and preserve the exact binary hash.
+
+Linux requires glibc 2.35. Software Vulkan proves functional rendering, not gaming-GPU frame pacing.
+Windows build/tests and payload validation passed; Windows graphics/input runtime remains untested.
+The separate development binary is `5d5ada367b84f71ddcb01ecf83dea4e80346431b2e8f8e798c0f2e1bf346e4cc`;
+its 184-frame campaign receipt must not be substituted for the optimized package's 185-frame proof.
+
+The release-CI browser WASM hash is `a77b2c868d80b5d8c22fdd079cb8111153666f496eec163d63659370217d6026`.
+The local development WASM hash is `dada0101efb8415504a5c12f04df80c87383c4331934160dfcd453016a26f2dd`.
+Keep their build receipts separate. Existing local complete-development archive
+`dist/Direvanity-verified-development-checkpoint.zip` has SHA-256
+`5f2db429bf68b22d199255238f8108e6d5d014cce816c21f6c65b70ffe1fbb86`; it predates the final release-package
+bundle and records its then-uncommitted source state. Do not present it as the final distribution.
+
+### Blockers and rejected routes
+
+Automatic approval review rejected the complete archive's Google Drive upload because the specific
+payload and destination lack explicit user-authored authorization. It separately rejected changing
+the GitHub repository URL, distinguishing that operation from the authorized game rename. Neither
+operation succeeded. Obtain specific user approval before trying either again; no alternate upload
+or rename route may bypass those rejections.
+
+Do not repeat the installation-token release-create HTTP403 route or expand token permissions.
+Use supported authenticated publication controls and verify the actual resulting release assets.
+Download Actions artifacts through the dedicated GitHub artifact-download operation, not the blocked
+browser download handoff. Preserve exact run/artifact IDs; do not rebuild or redownload already verified
+unchanged packages. The scoped Xvfb/AF_UNIX failure below remains unchanged; do not reprovision it.
+
+### Exact next delivery action
+
+The GitHub prerelease and its six assets are already published and their remote digests/sizes are
+verified in `dist/qa/release-publication.json`. The separate complete source/build/evidence archive is
+packaged after this documentation commit as `dist/Direvanity-checkpoint.zip`; consult its adjacent
+`.manifest.json` and internal `CHECKPOINT.json` for its actual identity and payload verification.
+Reuse an existing verified checkpoint. If those artifacts are absent, package the source with both
+verified platform ZIPs/receipts, the exact released offline browser files and captured QA evidence.
+The Drive transfer and repository URL rename remain approval-blocked until specifically authorized.
+The late-save browser visual boundary remains recorded above. After delivery, continue from the next
+implementation milestone; do not rediscover source, rebuild unchanged binaries, re-upload the six
+existing release assets or rerun settled gameplay checks.
+
+### Next implementation milestone
+
+Bring Hearthmere → Hollow Moor → Forgotten Sanctum to a production-quality region with original
+rigged art, typed attack timelines, real projectile/chain delivery, distinct class generators, authored
+enemy ecology, branching dialogue, audio/VFX and a multi-phase boss. Verify controller/rebinding,
+accessibility and Windows/Linux hardware frame pacing before scaling to the planned acts. Preserve
+the playable expansion and expeditions throughout; do not substitute more duration estimates for
+finished content.
+
+Use `source /workspace/scratch/f01d9d0c81e4/toolchain/env.sh` for the restored Rust toolchain and
+`source /workspace/scratch/f01d9d0c81e4/system-packages/env.sh` for the validated offscreen Vulkan route.
+Reuse these paths while their host and linkage remain unchanged. Earlier alpha.2 release provenance
+is preserved in [HISTORY_ALPHA2.md](HISTORY_ALPHA2.md); historical environment records follow.
 
 ## Rootless Debian runtime packages and offscreen Vulkan
 
@@ -106,12 +191,12 @@ The package prefix is reproducible build-runner material and does not belong in 
 
 Reassess this route if the base OS, architecture, Mesa/LLVM linkage, Vulkan loader or socket capability changes. Do not assume that a different runner shares the X11 restriction.
 
-The native offscreen gates are complete for both the RPG campaign and legacy encounter. The
-current extracted optimized Linux campaign run exited 0 at 185 frames/tick 354 with ten command
-checks, exact save roundtrip and validated HUD; checksum `21debfd8d94ba33c`. Its 1440 × 900 creator
-and campaign captures were reviewed. The separate legacy smoke passed 120 frames and three
-commands. Reuse this environment rather than reprovisioning; continue the R1 RPG work above.
-Windows target-hardware rendering and input capture remain outstanding.
+The Direvanity optimized package independently passed this same offscreen route at 185 frames /
+tick 354, with ten campaign commands, exact save roundtrip and validated HUD; checksum
+`6ca474ed5e8d0a66`. Its 1440 × 900 creator and campaign captures were reviewed. The separate legacy
+smoke passed 120 frames and three commands. Exact package lineage is recorded in the current
+checkpoint above. Reuse the environment rather than reprovisioning. Windows target-hardware
+rendering and interactive input capture remain outstanding.
 
 ## Historical alpha.1 portable Linux baseline
 
@@ -151,7 +236,7 @@ PNG are in the same directory. [HISTORY_ALPHA1.md](HISTORY_ALPHA1.md) retains th
 evidence. Do not reuse the rejected Ubuntu-latest executable or count its CI-only smoke as the
 portable artifact result.
 
-## Windows runtime dependency
+## Historical alpha.2 Windows runtime dependency
 
 The alpha.2 Windows x64 package contains a 76,911,616-byte executable built from
 `a96d473d834dac66b0c0f0977300ed6dca45899e`, SHA-256
