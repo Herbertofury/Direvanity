@@ -2,6 +2,10 @@
 
 **An ambitious original action RTS. A reusable Rust engine beneath it.**
 
+[**Play the browser encounter**](https://herbertofury.github.io/Dreadmarch/) ·
+[Native downloads](https://github.com/Herbertofury/Dreadmarch/releases) ·
+[Production roadmap](docs/ROADMAP.md)
+
 Lead a commander and a growing legion through a dark-fantasy battlefield. Reclaim three relics,
 survive five enemy breaches, and combine tactical orders with a decisive commander ability.
 

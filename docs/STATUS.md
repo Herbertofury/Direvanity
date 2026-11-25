@@ -27,7 +27,14 @@ Founded 24 November 2026. This is a playable engineering foundation toward the f
   invalid-save atomicity, recruitment, readable errors and memory-growth integration checks.
 - The offline browser file embeds the compiled Rust simulation and is 589,020 bytes.
 - 20 packaged browser control regressions pass against the real WASM with mocked DOM/Canvas.
-  This is structural/simulation evidence; browser visual rendering has not been independently captured.
+  Separately, the live browser playtest was visually inspected and exercised through actual controls:
+  launch, pause/resume, recruitment, commander/army selection, right-click orders, Soulfire targeting,
+  field manual, restart and save/load. Saving at 13 units/30 essence, recruiting to 14/5, and loading
+  restored 13/30. The launch screen, battlefield, objectives, minimap and action bar were readable.
+- Live browser playtest: https://herbertofury.github.io/Dreadmarch/. Deployment run `45566607509`
+  passed the compiled ABI and control checks before publication.
+- A fresh extraction of the complete checkpoint verified all 51 file hashes and executable mode,
+  then independently passed the 120-frame native GPU smoke with the identical final checksum.
 - The independent warehouse-routing sample uses only the generic engine, with no game-rule imports.
 - Public CI has passed simulation, full battle, replay, independent-engine and browser jobs.
   Earlier native lint findings were corrected and strict Clippy passed locally. Final cross-platform

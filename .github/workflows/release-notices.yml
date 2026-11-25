@@ -1,6 +1,9 @@
 name: Complete release distribution notices
 
 on:
+  workflow_run:
+    workflows: [Publish playable checkpoint]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -13,11 +16,17 @@ permissions:
 
 jobs:
   notices:
-    if: github.ref == 'refs/heads/main'
+    # The initial native build began before the notice collector existed.
+    # Future release.yml builds already include notices during packaging.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_sha == '780eec867be4bfd1b910cfb11f091c0475e73ce8' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_TAG: ${{ inputs.tag || 'v0.1.0-alpha.1' }}
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Generate recorded notices from the exact locked graph

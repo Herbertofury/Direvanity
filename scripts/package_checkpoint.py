@@ -27,7 +27,8 @@ if not browser.is_file():
     raise SystemExit('Build the browser playtest with scripts/build_web.py first.')
 files.append((browser,'play/Dreadmarch-playtest.html'))
 for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-receipt.json',
-             'verification.json','spatial-benchmark.json','battle-smoke.json','extracted-native-receipt.json']:
+             'verification.json','spatial-benchmark.json','battle-smoke.json','extracted-native-receipt.json',
+             'browser-live-receipt.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 if args.native:
