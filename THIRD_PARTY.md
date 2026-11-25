@@ -1,6 +1,6 @@
 # Third-party provenance and redistribution notices
 
-Original Rust game and engine code, browser presentation, procedural geometry, and documentation in this repository were created for Dreadmarch. No Diablo, Lost Ark, or Path of Exile source or media files are distributed here. Research candidates in `docs/RESEARCH.md` are references; they are not automatically vendored code.
+Original Rust game and engine code, browser presentation, procedural geometry, and documentation in this repository were created for Dreadmarch. No proprietary Diablo, Divinity, Lost Ark, or Path of Exile implementation code or media files are distributed here. Research candidates in `docs/RESEARCH.md` are references; they are not automatically vendored code.
 
 ## Exact dependency inventory
 
@@ -37,3 +37,16 @@ Some published crates omit their repository-level license files. Exact upstream 
 The collector writes the bundle and returns a nonzero status while any exception remains. `--allow-incomplete` can be used deliberately to produce a distribution supplement with that exception still visible; it does not remove the exception or claim the bundle is complete. Resolve the missing upstream notice before treating this check as a fully satisfied redistribution gate.
 
 Future imported code or assets must add their exact source revision, license, notices, and any modifications. When the lock changes, regenerate the bundle and review any new missing notices instead of reusing a stale dependency list.
+
+## Research catalogues
+
+`data/research/` contains versioned factual names, identifiers, category/ownership information, tree
+relationships and original mechanical synthesis. The three atlases preserve their source registers,
+input hashes, edition boundaries and unresolved coverage. Upstream tooltip prose and assets are not
+redistributed. These records are research references and do not imply that source-engine code was
+relicensed under Dreadmarch's MIT/Apache licenses.
+
+OpenDivine and Divine Tools are recorded with their upstream GPL-3.0 licenses; divproxy is recorded
+as AGPL-3.0. The pinned current DevilutionX source uses Sustainable Use License 1.0; it is not treated
+as a permissive commercial-engine base. No code from these projects is imported into Dreadmarch.
+See the exact pinned source-license ledger in `data/research/diablo-catalog.json` and the Divinity atlas.
