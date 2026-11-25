@@ -37,3 +37,19 @@ receipt = {'wasm_bytes':len(data), 'wasm_sha256':hashlib.sha256(data).hexdigest(
            'html_bytes':output.stat().st_size,'html_sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
 (dist/'web-build.json').write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
 print(json.dumps({'output':str(output),**receipt},indent=2))
+
+# The character-led campaign is the primary experience; retain the skirmish build.
+rpg = (root/'web/rpg.template.html').read_text(encoding='utf-8')
+for key, value in {
+    '__RPG_CSS__': (root/'web/rpg.css').read_text(encoding='utf-8'),
+    '__RPG_JS__': (root/'web/rpg.js').read_text(encoding='utf-8'),
+    '__DREAD_WASM_BASE64__': base64.b64encode(data).decode(),
+}.items():
+    rpg = rpg.replace(key, value)
+rpg_output = dist/'Dreadmarch-campaign.html'
+rpg_output.write_text(rpg, encoding='utf-8')
+campaign_receipt = {'campaign': str(rpg_output), 'bytes': rpg_output.stat().st_size,
+                    'sha256': hashlib.sha256(rpg_output.read_bytes()).hexdigest(),
+                    'wasm_sha256': hashlib.sha256(data).hexdigest()}
+(dist/'campaign-build.json').write_text(json.dumps(campaign_receipt, indent=2)+'\n', encoding='utf-8')
+print(json.dumps(campaign_receipt))

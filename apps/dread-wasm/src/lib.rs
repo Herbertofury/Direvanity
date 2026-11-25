@@ -24,6 +24,54 @@ pub extern "C" fn new_game(seed: u32) {
     });
 }
 
+/// Create a campaign from validated UTF-8 CharacterCreation JSON in input_buffer.
+#[unsafe(no_mangle)]
+pub extern "C" fn new_campaign(seed: u32) -> i32 {
+    BRIDGE.with(|bridge| {
+        let mut bridge = bridge.borrow_mut();
+        let result = serde_json::from_slice::<dread_sim::rpg::CharacterCreation>(&bridge.input)
+            .map_err(|e| e.to_string())
+            .and_then(|creation| {
+                World::new_campaign(u64::from(seed), creation).map_err(|e| e.to_string())
+            });
+        match result {
+            Ok(world) => {
+                bridge.world = world;
+                bridge.output.clear();
+                0
+            }
+            Err(error) => {
+                bridge.output = error.into_bytes();
+                1
+            }
+        }
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn class_catalogue() -> usize {
+    BRIDGE.with(|bridge| {
+        let mut bridge = bridge.borrow_mut();
+        bridge.output = serde_json::to_vec(dread_sim::rpg::catalogue()).expect("valid catalogue");
+        bridge.output.len()
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn campaign_locations() -> usize {
+    BRIDGE.with(|bridge| {
+        let mut bridge = bridge.borrow_mut();
+        let points = bridge
+            .world
+            .campaign
+            .as_ref()
+            .map(|c| dread_sim::rpg::points_of_interest(&c.region))
+            .unwrap_or_default();
+        bridge.output = serde_json::to_vec(&points).expect("valid locations");
+        bridge.output.len()
+    })
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn step(ticks: u32) {
     BRIDGE.with(|bridge| {

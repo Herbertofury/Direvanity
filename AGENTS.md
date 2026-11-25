@@ -3,8 +3,14 @@
 Read README.md and docs/VISION.md, then the code for the affected subsystem.
 The canonical source repository is https://github.com/Herbertofury/Dreadmarch.
 
-- Preserve the ambition: a high-end original action RTS and a reusable Rust engine.
-- Diablo IV, Lost Ark, Path of Exile, and Path of Exile II are creative inspirations.
+- Preserve the ambition: a massive, character-led single-player action RPG and a reusable Rust engine.
+- The user's 25 November direction supersedes RTS-first positioning. Character creation, class selection,
+  exploration, towns, quests, loot and a full authored campaign are primary. Preserve the existing
+  skirmish as an optional engine test; it must not substitute for the RPG.
+- Diablo's full series, Lost Ark, original Divine Divinity (2002), the Divinity series, Path of Exile,
+  and Path of Exile II are creative inspirations. Preserve each Diablo class identity in the roster.
+- Research coverage must distinguish verified source abilities, original adaptations, implemented
+  effects and future content; never label a representative ability sample as the complete inventory.
 - Keep generic engine systems in dread-core, game rules in dread-sim, and rendering/input in clients.
 - All clients must use the same authoritative Rust simulation. No JavaScript gameplay fork.
 - Integer deterministic simulation, stable command ordering, explicit save/replay versions.

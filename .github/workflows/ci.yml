@@ -36,12 +36,19 @@ jobs:
         run: node tests/web_abi.mjs
       - name: Packaged control regressions with real Rust state
         run: node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+      - name: Complete campaign through all 19 classes
+        run: node tests/rpg_abi.mjs
+      - name: Character creator and campaign controls
+        run: node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: Dreadmarch-browser-playtest
           path: |
+            dist/Dreadmarch-campaign.html
             dist/Dreadmarch-playtest.html
             dist/web-build.json
+            dist/rpg-abi-proof.json
+            dist/rpg-controls-proof.json
           if-no-files-found: error
   native:
     runs-on: ${{ matrix.os }}

@@ -1,145 +1,135 @@
 # DREADMARCH
 
-**An ambitious original action RTS. A reusable Rust engine beneath it.**
+**A massive single-player action RPG in development. A reusable Rust engine beneath it.**
 
-[**Play the browser encounter**](https://herbertofury.github.io/Dreadmarch/) ·
-[Native downloads](https://github.com/Herbertofury/Dreadmarch/releases) ·
-[Production roadmap](docs/ROADMAP.md)
+[**Play the campaign**](https://herbertofury.github.io/Dreadmarch/) ·
+[Source and downloads](https://github.com/Herbertofury/Dreadmarch/releases) ·
+[Research atlases](docs/research/) · [Production roadmap](docs/ROADMAP.md)
 
-Lead a commander and a growing legion through a dark-fantasy battlefield. Reclaim three relics,
-survive five enemy breaches, and combine tactical orders with a decisive commander ability.
+Create a character, choose a class, explore an original dark-fantasy world, meet its people, discover
+secrets and equipment, and develop a build through an authored campaign. The original **Divine Divinity
+(2002)** is central to the world and role-playing direction. Our great inspirations also include the
+**entire Diablo series, Diablo IV, Lost Ark, Path of Exile and Path of Exile II**.
 
-Our great inspirations are **Diablo IV, Lost Ark, Path of Exile, and Path of Exile II**.
-The long-term goal is to meet and surpass their best qualities through exceptional combat,
-art direction, animation, systemic depth, responsiveness and polish. That is the production
-ambition, not a claim about the current geometric prototype.
+The ambition is to meet and surpass the strongest qualities of these games through exceptional combat,
+art direction, animation, systemic depth, exploration, responsiveness and polish. “AAAA” is our quality
+destination. The current playable build is a procedural prologue, not a finished massive campaign.
 
-## What exists today
+## What is playable
 
-- A native **Bevy 0.20.1** 3D client with an isometric camera, selection, orders, HUD and combat effects.
-- A completely offline browser playtest compiled from the **same Rust simulation**.
-- Integer fixed-step gameplay, obstacle-aware pathfinding, formation destinations and ranged line of sight.
-- Commander, vanguard and ranger units; enemy reavers and brutes; combat, recruitment and essence income.
-- Three capture objectives, five waves, victory/defeat, restart and validated save/load.
-- A renderer-independent engine crate and an independent warehouse-navigation sample.
-- Replay tests, full-battle verification, spatial-query benchmarks and a native offscreen render check.
+- **19 class identities:** Warrior, Rogue, Sorcerer/Sorceress, Monk, Bard, Barbarian, Amazon, Assassin,
+  Necromancer, Paladin, Druid, Crusader, Demon Hunter, Witch Doctor, Wizard, Blood Knight, Tempest,
+  Spiritborn and Warlock. Class and body silhouette are independent.
+- Character name, body silhouette, six hair styles, skin/hair/eye/cloth colors and stature, with a live preview.
+- **174 original prototype skill nodes**, organized by class into prerequisites and branches. They are
+  separate from the source-game research catalogue; not every researched source ability is implemented.
+- One hero, active abilities, mastery passives, cooldowns, focus, XP/levels, skill points and free hub retraining.
+- Three connected regions: **Hearthmere → Hollow Moor → Forgotten Sanctum**. Talk to the archivist,
+  recover the Ashen Concord, return it, and resolve the quartermaster’s missing-satchel quest.
+- Persistent defeated enemies, unopened/opened caches, dropped loot, inventory and equipped items.
+- Independent browser character slots, exact save/load and portable JSON save export/import.
+- Native Bevy 3D presentation and an offline browser client backed by the **same Rust simulation**.
 
-Read [STATUS.md](docs/STATUS.md) for the exact verified state and remaining limitations. The native
-and browser presentations are distinct, while authoritative game rules are identical. The browser
-playtest uses Canvas2D to make the simulation easy to try; it is not the production GPU renderer.
+The native campaign integration and release evidence are tracked in [STATUS.md](docs/STATUS.md).
+Always check the release tag: the older `v0.1.0-alpha.1` binaries contain the earlier RTS encounter.
+That encounter remains an [optional skirmish](https://herbertofury.github.io/Dreadmarch/skirmish.html)
+and regression fixture. The campaign is now the primary product.
 
-## Play or build
+## Research, then original synthesis
 
-Download a published playtest from [Releases](https://github.com/Herbertofury/Dreadmarch/releases).
-`Dreadmarch-playtest.html` is a single offline file: download it and open it in a modern browser.
-Windows native packages contain `dreadmarch.exe`. The program requires no proprietary game assets.
+The research preserves source-game identities, editions, patches, tree structure and coverage boundaries.
+A record in an index is not automatically a complete behavioral specification. Source mechanics inform
+original Dreadmarch abilities; commercial game code, dialogue, art, music and models are not bundled.
 
-For Windows, install the [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe)
-if the program reports a missing `VCRUNTIME140.dll`. Microsoft documents the supported runtime in
-its [Visual C++ Redistributable guide](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/).
-The Windows executable has passed cross-platform build, lint and native regression gates; Windows
-GPU runtime and target-hardware frame times remain to be verified.
+- [Diablo class and ability atlas](docs/research/DIABLO_CLASS_ATLAS.md)
+- [Divinity series atlas, including original Divine Divinity](docs/research/DIVINITY_ATLAS.md)
+- [Lost Ark / Path of Exile systems and class mapping](docs/research/ARPG_SYSTEMS.md)
+- [Accepted RPG direction](docs/RPG_DIRECTION.md)
+- [Original class synthesis and production rules](docs/CLASS_SYNTHESIS.md)
 
-The portable Linux x64 release was built on Ubuntu 24.04. Its executable requires glibc **2.35 or
-newer**, plus the normal X11 and graphics-driver runtime libraries. The exact downloaded release
-artifact passed a fresh extraction and 120-frame offscreen Vulkan/gameplay smoke on Debian 13.
-See [the release evidence](docs/STATUS.md#native-release-evidence) for hashes and verification limits.
+Research datasets live in `data/research/`. Playable original definitions live in
+`data/gameplay/classes.json`. Keeping those domains separate makes actual implementation coverage visible.
 
-To build from source, install the [official Rust toolchain](https://rustup.rs/) and the normal C/C++
-linker for your platform. Windows uses Visual Studio Build Tools with Desktop development with C++.
-The repository pins Rust **1.100.0** and provides `Cargo.lock`.
+## Run or build
+
+The browser campaign is a single offline file, `Dreadmarch-campaign.html`. Open it in a modern desktop
+browser; no proprietary asset download or server is required. Use the published play link or build:
 
 ```bash
 git clone https://github.com/Herbertofury/Dreadmarch.git
 cd Dreadmarch
-cargo run -p dreadmarch-client --release
+python3 scripts/build_web.py
+# Open dist/Dreadmarch-campaign.html.
 ```
 
-Linux requires X11 development/runtime libraries for the windowed client. The first scene is
-procedural, so there is no asset download step.
-
-### Browser build
+Install the [official Rust toolchain](https://rustup.rs/) first. The repository pins **Rust 1.100.0**,
+**Bevy 0.20.1** and **wgpu 30.0.2** through the toolchain file and Cargo.lock. To build the native client:
 
 ```bash
-rustup target add wasm32-unknown-unknown
-python3 scripts/build_web.py
-# Open dist/Dreadmarch-playtest.html directly. No server or installation needed.
+cargo run --locked -p dreadmarch-client --release
 ```
 
-### Controls
+Windows needs the normal MSVC build tools; Linux windowed builds need X11 development/runtime libraries
+and graphics drivers. These are current dependencies, not evidence of finished production rendering.
+The browser uses Canvas2D for an accessible simulation playtest; Bevy is the native rendering path.
 
-| Action | Native 3D | Browser playtest |
-| --- | --- | --- |
-| Select / box select | Left click / left drag; Shift adds | Left click / left drag; Shift adds |
-| Move squads | Right click; Shift-right-click to attack-move | Right click |
-| Commander ability | Space, then choose a target | Q, then choose a target |
-| Recruit vanguard / ranger | 1 / 2, or the action buttons | V / B, or the action buttons |
-| Select army / commander | Tab / C | A / 1 |
-| Hold position | H | H |
-| Pause / resume | P | Space |
-| Restart | R | Restart button |
-| Save / load | F5 / F9 | Save / Load buttons |
-| Camera | WASD pan, Q/E orbit, wheel zoom | Wheel zoom, middle drag, F to fit |
-| Field manual | F1 | Help button |
+### Browser campaign controls
 
-The clients' field manuals describe their selection shortcuts and camera details.
+| Action | Control |
+| --- | --- |
+| Move / approach / interact | Left click ground or a marked person, object or road |
+| Cast selected class skill | Right click a target |
+| Select a learned active skill | 1–9 or hotbar button |
+| Skills / inventory / journal / world | K / I / J / M |
+| Pause / resume | Space or Pause button |
+| Close panel | Escape |
+| Zoom | Mouse wheel |
+| Save / load / export | Header buttons |
+| Choose another character / import | Character creator |
 
-## Reusable engine, separate game
+Panels pause the world and preserve the previous pause state. Hidden tabs pause explicitly. Saves are
+opaque UTF-8 from Rust; clients do not round-trip the 64-bit RNG through JavaScript Number.
+
+## Reusable engine
 
 | Package | Responsibility |
 | --- | --- |
-| `dread-core` | Fixed-point geometry, generic navigation, line of sight, spatial queries, hashing |
-| `dread-sim` | Dreadmarch rules, units, combat, economy, objectives, commands and saves |
-| `dreadmarch-client` | Native 3D Bevy presentation, UI and input |
-| `dread-wasm` | Thin WebAssembly ABI over the same simulation |
+| `dread-core` | Integer geometry, generic navigation, line of sight, spatial queries, hashing |
+| `dread-sim` | Campaign and skirmish rules, abilities, characters, quests, items, commands, saves |
+| `dreadmarch-client` | Native Bevy presentation, UI and input |
+| `dread-wasm` | Thin WebAssembly ABI over the same authoritative simulation |
 | `dread-headless` | Deterministic replay/save verification and CPU timing |
-| `engine-lab` | Separate warehouse-routing sample using only the generic engine |
+| `engine-lab` | Independent warehouse-routing sample importing only the generic engine |
+
+`dread-core` depends on neither Bevy nor Dreadmarch rules. A stable SDK, visual content editor and a
+second full game remain production milestones; the independent consumer already verifies the boundary.
+
+## Verify
 
 ```bash
-cargo run -p engine-lab
-cargo run -p dread-headless -- --verify
-cargo run -p dread-sim --example battle_smoke
-cargo run -p dread-core --example spatial_bench --release
-```
-
-`dread-core` depends on neither Bevy nor Dreadmarch's game rules. This establishes a real reusable
-boundary; a general-purpose visual editor and a second full game remain future milestones.
-
-## Quality gates
-
-```bash
-cargo fmt --all -- --check
-cargo test --workspace --exclude dreadmarch-client
-cargo clippy --workspace --all-targets -- -D warnings
-cargo build -p dreadmarch-client
-cargo run -p dreadmarch-client -- --smoke-test --screenshot dist/native-smoke.png
+cargo test --workspace --exclude dreadmarch-client --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 python3 scripts/build_web.py
+node tests/rpg_abi.mjs
+node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
 node tests/web_abi.mjs
 node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+cargo run --locked -p dread-sim --example battle_smoke
 ```
 
-The native smoke test renders offscreen using the actual GPU pipeline, applies real gameplay
-commands, checks save/load and captures the scene. A software Vulkan driver is sufficient for
-functional QA. Its timing is not an RTX 4090 performance result.
+The campaign ABI suite completes both quests with **every class**, through actual public commands,
+then verifies region persistence and save fidelity. Structural browser tests and actual visual/runtime
+inspection are reported separately. Software Vulkan proves functional rendering, not gaming-GPU FPS.
 
-## Where this goes
+## Production destination
 
-The next implementation milestone is **M1: combat and navigation**: unit footprints, avoidance and
-congestion tests, a data-driven ability and status model, and authored combat animation and encounters.
-Windows target-hardware input and frame-time capture is part of that vertical slice.
-
-- [Vision and quality targets](docs/VISION.md)
-- [Production roadmap](docs/ROADMAP.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Current research and reuse candidates](docs/RESEARCH.md)
-- [Technology decisions](docs/TECHNOLOGY.md)
-- [Verified checkpoint and next action](docs/STATUS.md)
-
-The research includes **D2Gamma**, **ferrets**, **Digital Extinction**, **Oxidator**, **Veloren**,
-**OpenDiablo2** and **DevilutionX**, with their actual languages, maturity and provenance. Current
-source was checked rather than assuming old search snippets still describe today's versions.
+Read [VISION.md](docs/VISION.md), [ROADMAP.md](docs/ROADMAP.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md),
+[TECHNOLOGY.md](docs/TECHNOLOGY.md) and [STATUS.md](docs/STATUS.md). The next content milestone is one
+production-quality RPG region: original rigged character art, expressive combat, authored enemies and
+boss, branching quest decisions, inventory depth and direct/controller movement, measured on real hardware.
 
 ## License
 
-Original project code is dual licensed under MIT or Apache-2.0, at your option. Dependencies retain
-their own licenses. See [THIRD_PARTY.md](THIRD_PARTY.md). No commercial game assets are bundled.
+Original project code is dual licensed under MIT or Apache-2.0. Dependencies retain their licenses;
+research data preserves source provenance. See [THIRD_PARTY.md](THIRD_PARTY.md). Inspiration credits
+are acknowledgements, not affiliation or a claim to the original games’ assets.

@@ -1,84 +1,72 @@
 # Dreadmarch: the ambition
 
-Working title. An original dark-fantasy action RTS, built on an engine that can power other games.
-Founded 24 November 2026. This document defines targets, not achieved production quality.
+An original, massive, character-led single-player action RPG and a reusable Rust engine.
+Founded 24 November 2026; RPG direction accepted 25 November 2026 (America/Denver).
+These are production targets, not claims of achieved quality.
 
 ## The promise
 
-Command an army with the clarity and agency of a great RTS. Fight through its front line as a
-commander with the impact, responsiveness, build depth, and audiovisual ambition of an exceptional
-action RPG. Every ability should change a tactical decision. Every army should express a build.
-The engine should make a second game faster to create without importing Dreadmarch's identity.
+Begin with a person you created, not a predetermined army. Choose a recognizable class identity, then
+shape it through skills, equipment, discoveries and decisions. Explore an interconnected world whose
+people, secrets, routes and consequences matter. Combat should be expressive enough for a brilliant
+moment-to-moment action game; the world should be deep enough to remember after the loot is gone.
+
+The entire main campaign must work offline, be completable solo, support pause, and preserve the world
+through local saves. No multiplayer service, daily attendance or competitive economy is required to
+complete the story or develop a satisfying build. Optional future modes must respect that foundation.
 
 ## Great inspirations
 
-| Inspiration | What we want to learn | What Dreadmarch should make its own |
+| Inspiration | What we study | Original Dreadmarch direction |
 | --- | --- | --- |
-| Diablo IV | Grounded dark-fantasy atmosphere, impactful attacks, cohesive material and lighting language | Commanders whose strikes visibly matter inside a readable army battle |
-| Lost Ark | Isometric spectacle, expressive skill animation, readable encounter choreography | Large encounters where squad positioning and commander execution interact |
-| Path of Exile | Interlocking skills, itemization, build experimentation, long-lived progression | Army doctrines, commander skills, equipment, and faction synergies that create different play styles |
-| Path of Exile II | Deliberate combat, expressive animation, boss anticipation and execution | Bosses designed for both direct hero play and tactical orders |
+| Divine Divinity (2002) | A continuous, explorable role-playing world, secrets, quests and freedom across skill Ways | Authored towns and wilderness, reactive quests, useful noncombat talents and persistent discoveries |
+| Diablo I / Hellfire | Atmosphere, danger, readable archetypes and shared magical knowledge | Distinct legacy identities, purposeful exploration and consequential encounters |
+| Diablo II / Resurrected | Character trees, class silhouettes, item interactions and build identity | Branch prerequisites and legible build choices without collapsing related classes |
+| Diablo III / Reaper of Souls | Strong skill variants, class fantasy, impact and readability | Original skill transformations that change decisions and behavior |
+| Diablo IV | Grounded dark-fantasy materials, animation and world cohesion | Original high-fidelity characters, regional identity and coherent audiovisual direction |
+| Diablo Immortal | Additional class identities and transformation mechanics | Adapt mechanics into an offline solo progression model |
+| Lost Ark | Responsive isometric combat, class identity systems and encounter choreography | Expressive actions and solo-readable bosses without MMO progression gates |
+| Path of Exile | Skill composition, itemization, passive structure and experimentation | Typed ability modifiers and deep equipment interactions with explainable rules |
+| Path of Exile II | Deliberate action, encounter execution and animation commitment | Clear anticipation, counterplay and deliberate build tradeoffs |
+| Later Divinity games | Surfaces, hybrid skills, dialogue consequences and systemic interactions | Select compatible ideas while preserving the real-time single-player action focus |
 
-These are inspirations, not feature-parity or asset-reuse claims. Primary links and candidate
-research are in [RESEARCH.md](RESEARCH.md).
+The [research atlases](research/) record versions, exact inventories and uncertain coverage. These
+credits do not imply feature parity or reuse of proprietary code, narrative or assets.
 
 ## Product pillars
 
-1. **Combat with weight and precision.** Fast input acknowledgment, legible hit timing, controllable
-   animation commitments, directional reactions, layered VFX and audio, satisfying death responses.
-2. **Strategy that survives the spectacle.** Formation movement, terrain, flanking, threat, counters,
-   readable enemy intent, economic decisions, and victory conditions beyond damage output.
-3. **Builds at commander and army scale.** Skills, item affixes, talents, faction doctrines, squad
-   upgrades, and encounter rules use a shared data-driven effect model with inspectable provenance.
-4. **A world with an artistic identity.** Original architecture, factions, silhouettes, color scripts,
-   animation, orchestration, environmental storytelling, and consistent art direction.
-5. **A reusable engine.** Generic math, navigation, scheduling, assets, rendering, editor, input,
-   persistence, profiling, and networking interfaces. Game content stays outside the generic core.
-6. **Performance and quality together.** Instrument frame-time percentiles, input latency, memory,
-   streaming, loading, determinism, and simulation cost. No unit-count caps or dropped simulation
-   content disguised as optimizations.
+1. **A real role-playing world.** Exploration, NPCs, secrets, readable navigation, dialogue decisions,
+   quest consequences and authored dungeons are core production work.
+2. **Every class has an identity.** Preserve all 19 researched Diablo identities, including Warrior,
+   Bard, Witch Doctor and the distinct Sorcerer/Wizard and Paladin/Crusader traditions.
+3. **Combat with weight and agency.** Immediate input acknowledgement, deliberate commitments,
+   reliable targeting, convincing reactions, layered VFX/audio and readable enemy intent.
+4. **Builds change how you play.** Active skills, variants, passives, resources and equipment interact
+   through explicit typed rules. Different names on identical damage circles are insufficient.
+5. **A character you own.** A substantial creator with unrestricted class/body combinations, persistent
+   appearance, equipment silhouettes, accessible controls, multiple saves and recoverable progress.
+6. **A reusable engine.** Generic math, navigation, scheduling, assets, rendering, input, persistence,
+   authoring and profiling remain separable from this world and its rules.
+7. **Quality and scale together.** Optimization must preserve actual content and simulation behavior.
+   Measure frame pacing, memory, loading, input response and worst-case navigation; do not hide work
+   by silently dropping entities, skills, quests or catalogue rows.
 
 ## Extremely high quality bar
 
-“AAAA” expresses the ambition. It is not a certification or a status label for this prototype.
-Surpassing the inspirations must be demonstrated by comparable finished encounters, art, animation,
-audio, usability, build diversity, stability, and measured player experience.
+“AAAA” expresses our ambition. Surpassing the inspirations requires comparable finished encounters,
+art, animation, audio, usability, build diversity, stability and measured player experience.
 
-| Dimension | Production target | Proof required before the claim |
+| Dimension | Production target | Required evidence |
 | --- | --- | --- |
-| Frame pacing | 144 Hz class high-end target, with explicit 60/120/144 Hz settings and uncapped option | Representative shipping scene traces, p50/p95/p99, target hardware and exact settings |
-| Simulation | Stable fixed-step workload under large armies with no silent omissions | Same command stream, same entity count, same final checksum before/after optimization |
-| Command response | Immediate UI acknowledgment and minimal local command-to-simulation delay | Input timestamps through simulation and displayed response |
-| Presentation | High-fidelity PBR, directional lighting, expressive animation, world-class VFX and audio | Art review and playtest evidence against a curated reference scene suite |
-| Scale | Thousands of units as an engineering target, not a shipped claim or limit | Several population tiers plus pathological clustering and navigation cases |
-| Loading | Seamless region transitions and prepared shaders in gameplay | Cold/warm runs, hitch traces, memory/VRAM and I/O budgets |
-| Reliability | Reproducible replays, validated saves, recoverable corruption, graceful device loss | Fuzz/property tests, cross-platform replay fixtures, fault injection |
-| Accessibility | Rebindable inputs, scalable interface, color-independent telegraphs, reduced flashes/motion | Keyboard/controller review, contrast and readability playtests |
-| Extensibility | A second distinct sample using engine crates without game rules | Separate consumer package, build, tests, and runtime |
+| Combat | Distinct class resources, skill delivery and tactical decisions; authored bosses | Blind playtests, encounter review, input/animation traces |
+| Campaign | Complete multi-act narrative, large persistent world, optional quests and secrets | End-to-end save-compatible playthroughs and content coverage audit |
+| Character art | Original high-fidelity bodies, faces, hair, armor and animation | Rig/LOD/material/animation review across the creator matrix |
+| Rendering | Cohesive PBR, lighting, shadows, atmospheric effects and exceptional VFX | Identical-scene comparisons, cross-vendor review, hardware captures |
+| Frame pacing | Explicit 60/120/144 Hz targets plus uncapped mode on suitable hardware | Representative shipping scenes, p50/p95/p99 and exact settings |
+| Streaming | Prepared shaders and smooth traversal across authored regions | Cold/warm traces, I/O, memory and VRAM measurements |
+| Reliability | Validated/migrated saves, deterministic game rules, crash recovery | Fault injection, long campaigns, cross-platform and corruption tests |
+| Accessibility | Rebinding, controller support, UI scale, color-independent cues, reduced effects | Input/readability/contrast testing and user review |
+| Reuse | A second game can use engine services without Dreadmarch content | Separate package, build, tests and runtime proof |
 
-Targets will be specified per hardware tier after measurement. No FPS figure in this table is a
-measured result from the first build.
-
-## First encounter: The Broken Concord
-
-The player leads a commander, vanguard, and ranged squads through a ruined battlefield. Capture
-three relic sites while surviving five enemy waves. Captured ground supports the economy. The
-commander's area ability can break an engagement, but its cooldown demands timing. Recruitment,
-positioning, target selection, and preserving the commander decide the outcome.
-
-The initial geometric environment is a functional gameplay and rendering test. Production characters,
-animation, sound design, loot systems, campaign, matchmaking, and advanced rendering remain explicit
-milestones. They must not be presented as implemented merely because a dependency supports them.
-
-## Engine independence
-
-`dread-core` must compile without Bevy and without Dreadmarch factions or classes. `dread-sim`
-contains this game's rules and is shared by native and browser clients. Rendering never becomes
-authoritative game state. A separate pathfinding sample demonstrates independent core consumption.
-
-## Scope expansion order
-
-Protect a complete play loop first; then deepen it. Add crafted animation and audio; robust
-navigation/collision; data-driven abilities and loot; content tooling; network architecture;
-then larger world systems and production breadth. Work can run in parallel where boundaries are
-stable. No arbitrary release date substitutes for the quality gates.
+The current three-region procedural prologue establishes a real loop. Production models, advanced
+animation, extensive narrative content, deep itemization and the measured quality targets remain work.

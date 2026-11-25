@@ -7,6 +7,7 @@ use dread_core::{SpatialIndex, stable_hash};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, VecDeque};
 use std::fmt;
+pub mod rpg;
 
 pub const TICK_HZ: u32 = 30;
 pub const CAPTURE_TICKS: u32 = 150;
@@ -143,6 +144,23 @@ pub enum MatchStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Command {
+    LearnSkill {
+        skill: String,
+    },
+    CastSkill {
+        skill: String,
+        target: Point,
+    },
+    Interact {
+        target: String,
+    },
+    Travel {
+        region: String,
+    },
+    Equip {
+        item: u32,
+    },
+    Respec,
     Move {
         units: Vec<UnitId>,
         target: Point,
@@ -191,6 +209,7 @@ pub enum SimEvent {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandError {
+    Roleplay(String),
     MatchFinished,
     EmptySelection,
     UnknownUnit(UnitId),
@@ -206,6 +225,7 @@ pub enum CommandError {
 impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Roleplay(message) => f.write_str(message),
             Self::MatchFinished => write!(f, "The battle has ended. Start a new expedition."),
             Self::EmptySelection => write!(f, "Select one or more allied units first."),
             Self::UnknownUnit(id) => write!(f, "Unit {id} is no longer available."),
@@ -247,6 +267,8 @@ pub struct World {
     pub events: Vec<SimEvent>,
     rng: u64,
     next_id: UnitId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub campaign: Option<rpg::CampaignState>,
     #[serde(skip)]
     spatial: SpatialIndex,
 }
@@ -323,6 +345,7 @@ impl World {
             events: Vec::new(),
             rng,
             next_id: 1,
+            campaign: None,
             spatial: SpatialIndex::default(),
         };
         world
@@ -380,6 +403,12 @@ impl World {
             return Err(CommandError::MatchFinished);
         }
         match command {
+            Command::LearnSkill { skill } => self.learn_skill(&skill)?,
+            Command::CastSkill { skill, target } => self.cast_skill(&skill, target)?,
+            Command::Interact { target } => self.interact(&target)?,
+            Command::Travel { region } => self.travel(&region)?,
+            Command::Equip { item } => self.equip(item)?,
+            Command::Respec => self.respec()?,
             Command::Move {
                 units,
                 target,
@@ -440,6 +469,10 @@ impl World {
                 }
             }
             Command::Cast { target } => {
+                if let Some(campaign) = &self.campaign {
+                    let starter = campaign.class().skills[0].id.clone();
+                    return self.cast_skill(&starter, target);
+                }
                 if self.commander_cooldown > 0 {
                     return Err(CommandError::AbilityCoolingDown);
                 }
@@ -478,6 +511,11 @@ impl World {
                 self.update_outcome();
             }
             Command::Recruit { kind } => {
+                if self.campaign.is_some() {
+                    return Err(CommandError::Roleplay(
+                        "Companions come from abilities and quests in the campaign.".into(),
+                    ));
+                }
                 let price = kind
                     .stats()
                     .recruitment_cost
@@ -513,11 +551,12 @@ impl World {
             return;
         }
         self.tick = self.tick.saturating_add(1);
+        self.step_campaign_effects();
         self.commander_cooldown = self.commander_cooldown.saturating_sub(1);
         for unit in &mut self.units {
             unit.attack_cooldown = unit.attack_cooldown.saturating_sub(1);
         }
-        if self.wave < TOTAL_WAVES {
+        if self.campaign.is_none() && self.wave < TOTAL_WAVES {
             self.wave_ticks_remaining = self.wave_ticks_remaining.saturating_sub(1);
             if self.wave_ticks_remaining == 0 {
                 self.spawn_wave();
@@ -536,7 +575,7 @@ impl World {
             if unit.hp <= 0 {
                 continue;
             }
-            let stats = unit.kind.stats();
+            let stats = self.stats_for(unit);
             let moving_peacefully = unit.order == Order::Move && !unit.path.is_empty();
             let aggro = if unit.kind == UnitKind::Ranger {
                 10_000
@@ -562,21 +601,27 @@ impl World {
             } else if matches!(unit.order, Order::Move | Order::AttackMove) {
                 goal = unit.target;
             } else if unit.team == Team::Enemy {
-                goal = commander_position;
+                goal = commander_position.filter(|p| {
+                    self.campaign.is_none() || unit.position.distance_squared(*p) < 14_000u64.pow(2)
+                });
+            } else if self.campaign.is_some() && unit.kind != UnitKind::Commander {
+                goal = commander_position
+                    .filter(|p| unit.position.distance_squared(*p) > 3_000u64.pow(2));
             }
             intents.push((index, goal, attack));
         }
         let mut hits = Vec::new();
         for (index, goal, attack) in intents {
             if let Some(target_index) = attack {
+                let stats = self.stats_for(&self.units[index]);
                 let unit = &mut self.units[index];
-                let stats = unit.kind.stats();
                 unit.attack_cooldown = stats.attack_interval;
                 hits.push((index, target_index, stats.damage));
             }
             let Some(goal) = goal else {
                 continue;
             };
+            let speed = self.movement_speed(&self.units[index]);
             let unit = &mut self.units[index];
             if unit.position.distance_squared(goal) <= 100u64.pow(2) {
                 unit.path.clear();
@@ -598,9 +643,7 @@ impl World {
                 unit.path_goal = Some(goal);
             }
             if let Some(next) = unit.path.front().copied() {
-                let candidate = unit
-                    .position
-                    .step_towards(next, unit.kind.stats().speed_per_tick);
+                let candidate = unit.position.step_towards(next, speed);
                 if self.map.contains_point(candidate) {
                     unit.position = candidate;
                 }
@@ -614,6 +657,14 @@ impl World {
         for (source, target, amount) in hits {
             let source_id = self.units[source].id;
             let target = &mut self.units[target];
+            let amount = if self.campaign.as_ref().is_some_and(|c| c.ward_ticks > 0)
+                && target.team == Team::Player
+                && target.kind == UnitKind::Commander
+            {
+                amount / 2
+            } else {
+                amount
+            };
             let damage = amount.min(target.hp.max(0));
             target.hp -= damage;
             if damage > 0 {
@@ -626,7 +677,9 @@ impl World {
             }
         }
         self.resolve_deaths();
-        self.update_objectives();
+        if self.campaign.is_none() {
+            self.update_objectives();
+        }
         self.update_outcome();
     }
 
@@ -653,7 +706,13 @@ impl World {
 
     pub fn validate(&self) -> Result<(), SaveError> {
         let fail = |message: &str| SaveError(message.to_owned());
-        if self.version != SAVE_VERSION {
+        if self.version
+            != if self.campaign.is_some() {
+                2
+            } else {
+                SAVE_VERSION
+            }
+        {
             return Err(fail("Unsupported save version."));
         }
         if !self.map.validate() {
@@ -661,6 +720,7 @@ impl World {
                 "Save navigation grid dimensions do not match its cells.",
             ));
         }
+        self.validate_campaign()?;
         if self.wave > TOTAL_WAVES
             || self.commander_cooldown > ABILITY_COOLDOWN
             || self.wave_ticks_remaining > WAVE_INTERVAL
@@ -725,10 +785,11 @@ impl World {
                 return Err(fail("Save has an invalid relic capture state."));
             }
         }
-        if self.objectives.is_empty() {
+        if self.objectives.is_empty() && self.campaign.is_none() {
             return Err(fail("Save has no victory objectives."));
         }
-        if self.status == MatchStatus::Victory
+        if self.campaign.is_none()
+            && self.status == MatchStatus::Victory
             && (self.wave < TOTAL_WAVES
                 || self.units.iter().any(|u| u.team == Team::Enemy)
                 || !self.objectives.iter().all(|o| o.captured))
@@ -848,6 +909,7 @@ impl World {
     }
 
     fn resolve_deaths(&mut self) {
+        self.reward_campaign_deaths();
         for unit in self.units.iter().filter(|u| u.hp <= 0) {
             if unit.team == Team::Enemy {
                 self.economy.kills = self.economy.kills.saturating_add(1);
@@ -863,6 +925,11 @@ impl World {
             });
         }
         self.units.retain(|u| u.hp > 0);
+        if let Some(campaign) = &mut self.campaign {
+            campaign
+                .effects
+                .retain(|effect| self.units.iter().any(|u| u.id == effect.target));
+        }
     }
 
     fn update_objectives(&mut self) {
@@ -904,6 +971,12 @@ impl World {
     }
 
     fn update_outcome(&mut self) {
+        if self.campaign.is_some() {
+            if self.commander().is_none() {
+                self.status = MatchStatus::Defeat;
+            }
+            return;
+        }
         if self.commander().is_none() {
             self.status = MatchStatus::Defeat;
         } else if self.wave == TOTAL_WAVES
