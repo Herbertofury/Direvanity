@@ -33,7 +33,7 @@ for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-
              'rpg-controls-proof.json', 'rpg-browser-live-receipt.json', 'rpg-rust-tests.log',
              'rpg-verification.json', 'native-campaign-smoke.png', 'native-campaign-smoke-creator.png',
              'native-campaign-smoke.log', 'native-campaign-receipt.json',
-             'dreadmarch-campaign-live.jpg', 'dreadmarch-skills-live.jpg', 'research-validation.json']:
+             'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg', 'dreadmarch-skills-live.jpg', 'research-validation.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 if args.native:
@@ -64,7 +64,7 @@ for artifact in args.artifact:
         guide.append('If VCRUNTIME140.dll is missing, install Microsoft Visual C++ x64 runtime: https://aka.ms/vc14/vc_redist.x64.exe')
     if artifact.name == 'Dreadmarch-linux-x64.zip':
         guide.append('Linux: unpack release/Dreadmarch-linux-x64.zip, then run ./dreadmarch.')
-        guide.append('Linux requires glibc 2.35+, X11 runtime libraries and a working graphics driver.')
+        guide.append('Linux requires the glibc version recorded in its BUILD-RECEIPT.json, X11 runtime libraries and a working graphics driver.')
 if args.native:
     guide.append('Included native executable: play/'+args.native.name)
 guide += ['', 'CAMPAIGN CONTROLS',

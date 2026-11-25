@@ -2,7 +2,7 @@
 //! All geometry and visual effects below are original procedural game assets.
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
-    camera::{RenderTarget, ScalingMode, ShadowLodOrigin},
+    camera::{CameraUpdateSystems, RenderTarget, ScalingMode, ShadowLodOrigin},
     input::{ButtonState, keyboard::KeyboardInput, mouse::MouseWheel},
     picking::hover::Hovered,
     post_process::bloom::Bloom,
@@ -11,7 +11,8 @@ use bevy::{
         render_resource::{TextureFormat, TextureUsages},
         view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
     },
-    ui::{IsDefaultUiCamera, Pressed},
+    transform::TransformSystems,
+    ui::{IsDefaultUiCamera, Pressed, UiSystems},
     ui_widgets::{Activate, Button as UiButton},
     window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
@@ -375,6 +376,17 @@ struct SkirmishControls;
 struct CreatorPanel;
 #[derive(Component)]
 struct CreatorSummary;
+type CampaignPanelFilter = Or<(
+    With<CreatorPanel>,
+    With<CampaignControls>,
+    With<SkirmishControls>,
+)>;
+type CampaignPanelData<'a> = (
+    &'a mut Node,
+    Has<CreatorPanel>,
+    Has<CampaignControls>,
+    Has<SkirmishControls>,
+);
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 enum CampaignPanel {
     #[default]
@@ -548,6 +560,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                smoke_driver,
                 camera_input,
                 keyboard_input.run_if(interactive),
                 pointer_input.run_if(interactive),
@@ -556,11 +569,16 @@ fn main() {
                 update_units,
                 update_hud,
                 update_campaign_ui,
-                update_poi_labels,
                 draw_tactical,
-                smoke_driver,
             )
                 .chain(),
+        )
+        .add_systems(
+            PostUpdate,
+            update_poi_labels
+                .after(TransformSystems::Propagate)
+                .after(CameraUpdateSystems)
+                .before(UiSystems::Layout),
         )
         .run();
 }
@@ -1084,19 +1102,7 @@ fn setup_ui(mut commands: Commands) {
 
 fn update_campaign_ui(
     battle: Res<Battle>,
-    mut panels: Query<
-        (
-            &mut Node,
-            Has<CreatorPanel>,
-            Has<CampaignControls>,
-            Has<SkirmishControls>,
-        ),
-        Or<(
-            With<CreatorPanel>,
-            With<CampaignControls>,
-            With<SkirmishControls>,
-        )>,
-    >,
+    mut panels: Query<CampaignPanelData<'_>, CampaignPanelFilter>,
     mut summary: Single<&mut Text, With<CreatorSummary>>,
 ) {
     for (mut node, creator, campaign, skirmish) in &mut panels {
@@ -1112,10 +1118,10 @@ fn update_campaign_ui(
     if let Some(draft) = &battle.creator {
         let profile = rpg::class(&draft.class_id).expect("creator class");
         summary.0 = format!(
-            "NAME: {}{}\n{}  ·  {}\n{}\n\nBODY {}   STATURE {}%   HAIRSTYLE {}\nSkin {}  Hair {}  Eyes {}  Accent {}",
+            "NAME: {}{}\n{}  |  {}\n{}\n\nBODY {}   STATURE {}%   HAIRSTYLE {}\nSkin {}  Hair {}  Eyes {}  Accent {}",
             draft.name,
             if battle.editing_name {
-                " |  TYPE TO EDIT · ENTER TO FINISH"
+                " |  TYPE TO EDIT | ENTER TO FINISH"
             } else {
                 ""
             },
@@ -1195,11 +1201,10 @@ fn camera_input(
 }
 
 fn keyboard_input(
-    keys: Res<ButtonInput<KeyCode>>,
+    (keys, cli): (Res<ButtonInput<KeyCode>>, Res<Cli>),
     mut text_events: MessageReader<KeyboardInput>,
     mut battle: ResMut<Battle>,
     mut orbit: ResMut<Orbit>,
-    cli: Res<Cli>,
     mut exit: MessageWriter<AppExit>,
     mut commands: Commands,
     mut last_walk: Local<u64>,
@@ -1958,9 +1963,8 @@ fn spawn_unit(
 
 fn update_units(
     mut commands: Commands,
-    assets: Res<VisualAssets>,
+    (assets, mut materials): (Res<VisualAssets>, ResMut<Assets<StandardMaterial>>),
     battle: Res<Battle>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     (time, fixed, cli): (Res<Time>, Res<Time<Fixed>>, Res<Cli>),
     mut scratch: Local<RenderScratch>,
     mut visuals: Query<(Entity, &mut UnitVisual, &mut Transform)>,
@@ -2068,7 +2072,7 @@ fn update_hud(
     if let Some(draft) = &battle.creator {
         let profile = rpg::class(&draft.class_id).expect("creator class");
         hud.0 = format!(
-            "{}  ·  {}\nCHARACTER CREATOR  ·  {} CLASS IDENTITIES",
+            "{}  |  {}\nCHARACTER CREATOR  |  {} CLASS IDENTITIES",
             draft.name,
             profile.name,
             rpg::catalogue().classes.len()
@@ -2081,7 +2085,7 @@ fn update_hud(
         let hero = battle.world.commander();
         let health = hero.map_or("FALLEN".into(), |u| format!("{}/{}", u.hp, u.max_hp));
         hud.0 = format!(
-            "{}  ·  {}  ·  LEVEL {}\n{}   HP {}   FOCUS {}   XP {}/{}   POINTS {}",
+            "{}  |  {}  |  LEVEL {}\n{}   HP {}   FOCUS {}   XP {}/{}   POINTS {}",
             c.character.name,
             c.class().name,
             c.level,
@@ -2102,7 +2106,7 @@ fn update_hud(
                     .unwrap_or(0)
                     .div_ceil(TICK_HZ);
                 format!(
-                    "{} · {} · {} focus{}",
+                    "{} | {} | {} focus{}",
                     s.name,
                     if c.learned.contains(&s.id) {
                         "LEARNED"
@@ -2111,7 +2115,7 @@ fn update_hud(
                     },
                     s.focus_cost,
                     if recovery > 0 {
-                        format!(" · {recovery}s")
+                        format!(" | {recovery}s")
                     } else {
                         String::new()
                     }
@@ -2129,7 +2133,7 @@ fn update_hud(
         status.0 = format!(
             "{}  |  {}  |  {}\nQUEST: {}\n{}{}",
             if battle.world.status == MatchStatus::Defeat {
-                "FALLEN · F9 LOAD OR R RESTART"
+                "FALLEN | F9 LOAD OR R RESTART"
             } else if battle.paused {
                 "PAUSED"
             } else {
@@ -2154,23 +2158,23 @@ fn update_hud(
             };
         text.0 = match battle.panel {
             CampaignPanel::Skills => {
-                let rows = c.class().skills.iter().enumerate().map(|(i, s)| format!("{} {} · {} · level {}{}",
+                let rows = c.class().skills.iter().enumerate().map(|(i, s)| format!("{} {} | {} | level {}{}",
                     if i == battle.skill_index { ">" } else { " " }, s.name, s.branch, s.minimum_level,
                     if c.learned.contains(&s.id) { "  [learned]" } else { "" })).collect::<Vec<_>>().join("\n");
-                let selected = battle.selected_skill().map_or(String::new(), |s| format!("\n\n{}\n{}\n{} · {} focus · {}s recovery\nPrerequisite: {}",
+                let selected = battle.selected_skill().map_or(String::new(), |s| format!("\n\n{}\n{}\n{} | {} focus | {}s recovery\nPrerequisite: {}",
                     s.name, s.description, s.kind, s.focus_cost, s.cooldown_ticks.div_ceil(TICK_HZ),
                     s.requires.as_ref().and_then(|id| c.class().skills.iter().find(|p| &p.id == id)).map_or("None", |p| p.name.as_str())));
-                format!("{} DISCIPLINES  ·  {} POINTS\n[ / ] select · L learn · Space cast\n\n{}{}\n\nT: retrain freely in Hearthmere. K: close.", c.class().name.to_uppercase(), c.skill_points, rows, selected)
+                format!("{} DISCIPLINES  |  {} POINTS\n[ / ] select | L learn | Space cast\n\n{}{}\n\nT: retrain freely in Hearthmere. K: close.", c.class().name.to_uppercase(), c.skill_points, rows, selected)
             }
             CampaignPanel::Inventory => {
                 let start = battle.item_index / 12 * 12;
-                let rows = c.inventory.iter().enumerate().skip(start).take(12).map(|(i, item)| format!("{} {}\n    {} · {} · power {}{}",
+                let rows = c.inventory.iter().enumerate().skip(start).take(12).map(|(i, item)| format!("{} {}\n    {} | {} | power {}{}",
                     if i == battle.item_index { ">" } else { " " }, item.name, item.rarity, item.slot, item.power,
-                    if c.equipped.get(&item.slot) == Some(&item.id) { " · EQUIPPED" } else { "" })).collect::<Vec<_>>().join("\n");
-                format!("INVENTORY  ·  {} ITEMS\n[ / ] select · U equip · I close\n\n{}\n\nApproach a dropped item and press J to collect it.",
+                    if c.equipped.get(&item.slot) == Some(&item.id) { " | EQUIPPED" } else { "" })).collect::<Vec<_>>().join("\n");
+                format!("INVENTORY  |  {} ITEMS\n[ / ] select | U equip | I close\n\n{}\n\nApproach a dropped item and press J to collect it.",
                     c.inventory.len(), if rows.is_empty() { "Your pack is empty." } else { &rows })
             }
-            CampaignPanel::Closed => "THE ASHEN CONCORD\n\nCreate a wanderer and follow Maelin's quest.\nAll encounters and progression work solo.\n\nRight-click or WASD moves your hero.\nNearby enemies are attacked automatically.\nSpace casts the selected class skill at the cursor.\n1–6 cast your learned active skills in tree order.\nJ talks, opens caches, collects loot or uses a gate.\n\nK opens disciplines. [ / ] chooses a skill.\nL learns it with an available point.\nI opens inventory; [ / ] selects and U equips.\nT retrains freely in Hearthmere.\nF2 opens the creator; Begin starts a new journey.\n\nQ/E orbit · Wheel zoom · C center\nP pause · R restart journey · F5 save · F9 load\nF12 screenshot · Esc close/exit · F1 close help\n\nPlayable foundation with procedural character art.\nThe full campaign and production class kits\nremain development goals.".into(),
+            CampaignPanel::Closed => "THE ASHEN CONCORD\n\nCreate a wanderer and follow Maelin's quest.\nAll encounters and progression work solo.\n\nRight-click or WASD moves your hero.\nNearby enemies are attacked automatically.\nSpace casts the selected class skill at the cursor.\n1-6 cast your learned active skills in tree order.\nJ talks, opens caches, collects loot or uses a gate.\n\nK opens disciplines. [ / ] chooses a skill.\nL learns it with an available point.\nI opens inventory; [ / ] selects and U equips.\nT retrains freely in Hearthmere.\nF2 opens the creator; Begin starts a new journey.\n\nQ/E orbit | Wheel zoom | C center\nP pause | R restart journey | F5 save | F9 load\nF12 screenshot | Esc close/exit | F1 close help\n\nPlayable foundation with procedural character art.\nThe full campaign and production class kits\nremain development goals.".into(),
         };
         return;
     }
@@ -2398,8 +2402,7 @@ fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>
 }
 
 fn smoke_driver(
-    mut cli: ResMut<Cli>,
-    mut battle: ResMut<Battle>,
+    (mut cli, mut battle): (ResMut<Cli>, ResMut<Battle>),
     mut commands: Commands,
     mut exit: MessageWriter<AppExit>,
     offscreen: Option<Res<OffscreenTarget>>,
@@ -2469,23 +2472,23 @@ fn smoke_driver(
             );
         }
         // Warm the real 3D/text pipelines before capturing the creator.
-        if cli.frames == 90 {
-            if let Some(path) = &cli.screenshot {
-                let path = std::path::Path::new(path);
-                let stem = path.file_stem().unwrap_or_default().to_string_lossy();
-                let creator_path = path.with_file_name(format!("{stem}-creator.png"));
-                let capture = if let Some(target) = offscreen.as_ref() {
-                    Screenshot::image(target.0.clone())
-                } else {
-                    Screenshot::primary_window()
-                };
-                commands
-                    .spawn(capture)
-                    .observe(save_to_disk(creator_path))
-                    .observe(|_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
-                        cli.creator_captured = true;
-                    });
-            }
+        if cli.frames == 90
+            && let Some(path) = &cli.screenshot
+        {
+            let path = std::path::Path::new(path);
+            let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+            let creator_path = path.with_file_name(format!("{stem}-creator.png"));
+            let capture = if let Some(target) = offscreen.as_ref() {
+                Screenshot::image(target.0.clone())
+            } else {
+                Screenshot::primary_window()
+            };
+            commands
+                .spawn(capture)
+                .observe(save_to_disk(creator_path))
+                .observe(|_: On<ScreenshotCaptured>, mut cli: ResMut<Cli>| {
+                    cli.creator_captured = true;
+                });
         }
         if cli.frames == 100 {
             battle.skill_index = 0;
