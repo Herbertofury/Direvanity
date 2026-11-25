@@ -94,8 +94,19 @@ frames, tick 354, ten command checks, exact save roundtrip, HUD validation and c
 Checksum `21debfd8d94ba33c` matches the optimized CI campaign result. Both 1440 × 900 captures were
 visually reviewed. `rpg-extracted-native-receipt.json` preserves package and binary hashes, every
 extracted file hash, CI smoke results and the independent run. Development, CI and extracted-package
-evidence remain separate. Windows package completion, publication and the complete archive readback
-are the remaining distribution steps for this checkpoint.
+evidence remain separate. The Windows job also passed its tests and optimized build. Its x86-64 PE
+executable is 76,911,616 bytes, SHA-256 `ebcf6ca79a6f4c87b872c02d07ecd47da9e6411a12c614914f8cd7fe46683349`.
+Windows checkout had converted 22 tracked text files to CRLF; parsed JSON data was identical. Those
+files were restored to the exact `a96d473` Git blobs while retaining the tested binary unchanged.
+The package receipt records both original CI and distribution identities. Repository attributes now
+keep future text checkouts at LF. Both packages contain all three exact research catalogues.
+
+Distribution package SHA-256 values:
+
+- Linux: `ba76dcd5f8ad49af9bb1c81b5a705ede3eecd3699860a24365bd028a44969b43`
+- Windows: `60a76ac1aaef2ef6d6010b4a152445647f1346bed44e1ed0ed380524d0c4c7f5`
+
+Publication and the complete archive readback are the remaining distribution steps for this checkpoint.
 
 ## Production work remains
 

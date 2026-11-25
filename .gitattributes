@@ -1,0 +1,2 @@
+# Keep source and research bytes identical in Windows and Unix release packages.
+* text=auto eol=lf

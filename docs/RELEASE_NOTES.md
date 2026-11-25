@@ -35,3 +35,11 @@ See `docs/STATUS.md` and the included build/runtime receipts for the exact sourc
 Native software-Vulkan captures establish functional rendering, not target gaming-GPU performance.
 Windows packages require the normal Microsoft Visual C++ x64 runtime; Windows GPU/window behavior
 must still be verified on real Windows hardware.
+
+## Package provenance
+
+Both optimized platform builds passed. Linux was exercised directly after fresh extraction. Windows
+research and documentation line endings were restored to the exact release-source Git bytes after
+checkout converted them to CRLF; the tested executable was preserved byte-for-byte. Its receipt
+retains the original CI package hash and the normalization record. Repository attributes enforce LF
+for future text checkouts. The final distribution checksums are recorded in `docs/STATUS.md`.
