@@ -32,6 +32,10 @@ jobs:
         run: cargo test --workspace --exclude dreadmarch-client --locked
       - name: Build optimized native game
         run: cargo build --locked --release -p dreadmarch-client
+      - name: Collect dependency and font notices
+        run: |
+          cargo fetch --locked
+          python scripts/collect_notices.py --allow-incomplete
       - name: Exercise the optimized GPU renderer offscreen
         if: runner.os == 'Linux'
         run: |
@@ -58,7 +62,7 @@ jobs:
           name = 'Dreadmarch-${{ matrix.platform }}'
           stage = out/name
           stage.mkdir(exist_ok=True)
-          for path in ['target/release/${{ matrix.binary }}','README.md','LICENSE-MIT','LICENSE-APACHE','THIRD_PARTY.md']:
+          for path in ['target/release/${{ matrix.binary }}','README.md','LICENSE-MIT','LICENSE-APACHE','THIRD_PARTY.md','dist/THIRD_PARTY_NOTICES.txt']:
               shutil.copy2(path, stage/pathlib.Path(path).name)
           shutil.copytree('docs', stage/'docs', dirs_exist_ok=True)
           with zipfile.ZipFile(out/(name+'.zip'),'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
@@ -75,6 +79,7 @@ jobs:
             dist/*.html
             dist/native-smoke.png
             dist/web-build.json
+            dist/THIRD_PARTY_NOTICES.txt
           if-no-files-found: error
   publish:
     needs: build

@@ -1,0 +1,67 @@
+name: Complete release distribution notices
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing prerelease whose packages receive dependency notices
+        required: true
+        default: v0.1.0-alpha.1
+
+permissions:
+  contents: write
+
+jobs:
+  notices:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Generate recorded notices from the exact locked graph
+        run: |
+          cargo fetch --locked
+          python3 scripts/collect_notices.py --allow-incomplete
+      - name: Download existing verified packages
+        run: |
+          gh release download "$RELEASE_TAG" --pattern 'Dreadmarch-*-x64.zip' --dir release-notices
+          gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha > release-notices/source-commit.txt
+      - name: Add notices while preserving every binary byte
+        shell: python
+        run: |
+          import hashlib, json, pathlib, zipfile
+          root = pathlib.Path('release-notices')
+          notices = pathlib.Path('dist/THIRD_PARTY_NOTICES.txt').read_bytes()
+          provenance = pathlib.Path('THIRD_PARTY.md').read_bytes()
+          receipt = {'schema': 1, 'source_commit': (root/'source-commit.txt').read_text().strip(),
+                     'notices_sha256': hashlib.sha256(notices).hexdigest(), 'packages': []}
+          packages = sorted(root.glob('Dreadmarch-*-x64.zip'))
+          assert len(packages) == 2, 'Expected Windows and Linux packages'
+          for package in packages:
+              before = hashlib.sha256(package.read_bytes()).hexdigest()
+              with zipfile.ZipFile(package) as z:
+                  items = [(info, z.read(info.filename)) for info in z.infolist()]
+              binaries = {info.filename: hashlib.sha256(data).hexdigest() for info, data in items
+                          if pathlib.PurePosixPath(info.filename).name in ('dreadmarch', 'dreadmarch.exe')}
+              assert len(binaries) == 1
+              prefix = package.stem + '/'
+              with zipfile.ZipFile(package, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+                  for info, data in items:
+                      if info.filename not in (prefix+'THIRD_PARTY.md', prefix+'THIRD_PARTY_NOTICES.txt'):
+                          z.writestr(info, data)
+                  z.writestr(prefix+'THIRD_PARTY.md', provenance)
+                  z.writestr(prefix+'THIRD_PARTY_NOTICES.txt', notices)
+              with zipfile.ZipFile(package) as z:
+                  assert z.testzip() is None
+                  for name, digest in binaries.items():
+                      assert hashlib.sha256(z.read(name)).hexdigest() == digest
+              after = hashlib.sha256(package.read_bytes()).hexdigest()
+              package.with_suffix('.sha256').write_text(after+'  '+package.name+'\n', encoding='utf-8')
+              receipt['packages'].append({'name': package.name, 'before_sha256': before,
+                  'sha256': after, 'binary_sha256': binaries, 'binary_unchanged': True})
+          (root/'source-commit.txt').unlink()
+          (root/'distribution-receipt.json').write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
+      - name: Publish complete packages and supplement
+        run: gh release upload "$RELEASE_TAG" release-notices/* dist/THIRD_PARTY_NOTICES.txt --clobber
