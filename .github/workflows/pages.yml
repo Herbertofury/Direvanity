@@ -1,0 +1,54 @@
+name: Publish verified browser playtest
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 'lts/*'
+      - name: Install repository-pinned Rust and WebAssembly target
+        run: rustup show
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6.0.0
+      - name: Build single-file Rust-WASM playtest
+        run: python3 scripts/build_web.py
+      - name: Verify actual WebAssembly ABI and save fidelity
+        run: node tests/web_abi.mjs
+      - name: Verify packaged controls against the Rust simulation
+        run: node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+      - name: Stage only the playable page
+        run: install -D -m 0644 dist/Dreadmarch-playtest.html pages/index.html
+      - name: Upload isolated Pages artifact
+        uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy verified playtest
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1
