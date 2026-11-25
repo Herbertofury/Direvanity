@@ -6,7 +6,7 @@ on:
       tag:
         description: Existing prerelease to receive the portable Linux package
         required: true
-        default: v0.1.0-alpha.1
+        default: v0.2.0-alpha.1
 
 permissions:
   contents: read
@@ -36,31 +36,32 @@ jobs:
           export WGPU_BACKEND=vulkan
           export LP_NUM_THREADS=2
           set -o pipefail
-          target/release/dreadmarch --smoke-test --screenshot dist/native-smoke.png | tee dist/portable-native-smoke.log
+          target/release/direvanity --smoke-test --screenshot dist/native-smoke.png | tee dist/portable-native-smoke.log
       - name: Enforce ABI ceiling and package the exact binary
         shell: python
         run: |
           import hashlib, json, pathlib, re, shutil, subprocess, zipfile
-          binary = pathlib.Path('target/release/dreadmarch')
+          binary = pathlib.Path('target/release/direvanity')
           symbols = subprocess.check_output(['objdump','-T',str(binary)], text=True)
           versions = {tuple(map(int, v.split('.'))) for v in re.findall(r'GLIBC_([0-9.]+)', symbols)}
           required = max(versions)
           assert required <= (2,39), f'glibc requirement exceeded: {required}'
           out = pathlib.Path('dist')
-          name = 'Dreadmarch-linux-x64'
+          name = 'Direvanity-linux-x64'
           stage = out/name
           stage.mkdir(exist_ok=True)
           for path in [binary,pathlib.Path('README.md'),pathlib.Path('LICENSE-MIT'),pathlib.Path('LICENSE-APACHE'),pathlib.Path('THIRD_PARTY.md'),out/'THIRD_PARTY_NOTICES.txt']:
               shutil.copy2(path,stage/path.name)
           shutil.copytree('docs',stage/'docs',dirs_exist_ok=True)
+          shutil.copytree('data',stage/'data',dirs_exist_ok=True)
           package = out/(name+'.zip')
           with zipfile.ZipFile(package,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
               for path in sorted(stage.rglob('*')):
                   if path.is_file(): z.write(path,name+'/'+path.relative_to(stage).as_posix())
           with zipfile.ZipFile(package) as z:
               assert z.testzip() is None
-              assert z.read(name+'/dreadmarch') == binary.read_bytes()
-              assert (z.getinfo(name+'/dreadmarch').external_attr >> 16) & 0o111
+              assert z.read(name+'/direvanity') == binary.read_bytes()
+              assert (z.getinfo(name+'/direvanity').external_attr >> 16) & 0o111
           digest = hashlib.sha256(package.read_bytes()).hexdigest()
           (out/(name+'.sha256')).write_text(digest+'  '+package.name+'\n',encoding='utf-8')
           receipt = {'schema':1,'build_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
@@ -95,4 +96,4 @@ jobs:
       - name: Publish verified portable package
         run: |
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
-          gh release upload "$RELEASE_TAG" dist/Dreadmarch-linux-x64.zip dist/Dreadmarch-linux-x64.sha256 dist/portable-linux-receipt.json dist/native-smoke.png --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$RELEASE_TAG" dist/Direvanity-linux-x64.zip dist/Direvanity-linux-x64.sha256 dist/portable-linux-receipt.json dist/native-smoke.png --clobber --repo "$GITHUB_REPOSITORY"

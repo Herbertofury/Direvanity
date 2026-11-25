@@ -34,15 +34,18 @@ jobs:
       - name: Verify actual WebAssembly ABI and save fidelity
         run: node tests/web_abi.mjs
       - name: Verify packaged controls against the Rust simulation
-        run: node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+        run: node tests/web_controls.mjs dist/Direvanity-playtest.html
       - name: Verify complete campaign through every class
-        run: node tests/rpg_abi.mjs
+        run: |
+          node tests/rpg_abi.mjs
+          node tests/rpg_modifiers.mjs
+          node tests/rpg_numeric_boundary.mjs
       - name: Verify character creator and campaign controls
-        run: node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
+        run: node tests/rpg_controls.mjs dist/Direvanity-campaign.html
       - name: Stage the primary campaign and optional skirmish
         run: |
-          install -D -m 0644 dist/Dreadmarch-campaign.html pages/index.html
-          install -D -m 0644 dist/Dreadmarch-playtest.html pages/skirmish.html
+          install -D -m 0644 dist/Direvanity-campaign.html pages/index.html
+          install -D -m 0644 dist/Direvanity-playtest.html pages/skirmish.html
       - name: Upload isolated Pages artifact
         uses: actions/upload-pages-artifact@v5.0.0
         with:

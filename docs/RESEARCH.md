@@ -1,18 +1,18 @@
 # Research and adoption decisions
 
-Research date: **2026-11-24**, America/Denver. Working title: **Dreadmarch**.
+Research date: **2026-11-24**, America/Denver. Working title: **Direvanity**.
 
 ## Direction
 
-Dreadmarch is now an original dark-fantasy, offline single-player action RPG and the first consumer of a reusable Rust engine. **Original Divine Divinity (2002), the complete Diablo series, Diablo IV, Lost Ark, Path of Exile, and Path of Exile II are explicit creative and quality inspirations.** Their names describe the intended standard of combat, atmosphere, encounters and systems. The project intends to match and surpass those benchmarks through original execution. No current prototype is described as having achieved that standard.
+Direvanity is now an original dark-fantasy, offline single-player action RPG and the first consumer of a reusable Rust engine. **Original Divine Divinity (2002), the complete Diablo series, Diablo IV, Lost Ark, Path of Exile, and Path of Exile II are explicit creative and quality inspirations.** Their names describe the intended standard of combat, atmosphere, encounters and systems. The project intends to match and surpass those benchmarks through original execution. No current prototype is described as having achieved that standard.
 
 The combination is deliberate: commander-level action and character expression inside battles that also reward squad control, positioning and strategic decisions. The engine must remain usable for other games with different content and rules.
 
 ## Inspiration register
 
-The source column records developer or publisher material. The design interpretation and acceptance evidence are Dreadmarch decisions, rather than claims made by those sources.
+The source column records developer or publisher material. The design interpretation and acceptance evidence are Direvanity decisions, rather than claims made by those sources.
 
-| Inspiration | Source-grounded characteristics | Dreadmarch interpretation | Evidence required from our implementation |
+| Inspiration | Source-grounded characteristics | Direvanity interpretation | Evidence required from our implementation |
 | --- | --- | --- | --- |
 | **Diablo IV** | Blizzard describes a dark-fantasy world, distinct classes, powerful abilities, gear and character progression. [Official game overview](https://diablo4.blizzard.com/en-us) | Weighty, tactile combat; coherent dark materials and atmosphere; strong silhouettes; attacks whose sound, timing and visual impact agree. | Captured gameplay with impact timing, hit confirmation, enemy reactions, controlled exposure and legible units in a crowded battle. |
 | **Lost Ark** | Its official overview emphasizes advanced classes, ability customization, large bosses and multiphase raids with complex mechanics. [Official overview](https://www.playlostark.com/en-us/game/about) | Spectacular abilities and encounters that remain understandable at RTS camera distance; coordinated mechanics for a commander and army. | Boss mechanics are telegraphed clearly; players can identify danger, safe space and their own units during the largest effects. |
@@ -40,10 +40,10 @@ These are verified upstream versions, not a claim that every candidate has been 
 
 | Project | Actual implementation and provenance | Fit and current disposition |
 | --- | --- | --- |
-| [D2Gamma](https://github.com/Nugwa628/d2gamma) | Rust/Bevy Diablo II: Lord of Destruction reimplementation; MIT; author labels it early beta. Manifest pins Bevy `=0.19.1` and MSRV 1.95. | Highest-priority Diablo-specific architecture and subsystem candidate. Audit isolated code before importing. Its Diablo-specific data and behavior assumptions need an explicit adapter and do not define Dreadmarch's original world or reusable core. |
+| [D2Gamma](https://github.com/Nugwa628/d2gamma) | Rust/Bevy Diablo II: Lord of Destruction reimplementation; MIT; author labels it early beta. Manifest pins Bevy `=0.19.1` and MSRV 1.95. | Highest-priority Diablo-specific architecture and subsystem candidate. Audit isolated code before importing. Its Diablo-specific data and behavior assumptions need an explicit adapter and do not define Direvanity's original world or reusable core. |
 | [ferrets](https://github.com/valeriyr/ferrets) | Rust RTS engine; MIT OR Apache-2.0. Fixed-point simulation, pathfinding, lockstep and replay facilities. Root manifest currently uses Bevy 0.18. | Highest-priority navigation and determinism challenger. Several leaf crates have no Bevy dependency and can be evaluated separately. See bounded audit below. |
 | [Digital Extinction](https://github.com/DigitalExtinction/Game) | Rust/Bevy 3D RTS. Code AGPL-3.0; assets generally CC BY-SA 4.0 with per-directory exceptions. Archived 2026-02-17; README identifies early development. | Historical reference for RTS controls, architecture and multiplayer packaging. Not selected as a maintained engine foundation. Any code or asset integration needs its own recorded license disposition. |
-| [Oxidator](https://github.com/Ruddle/oxidator) | MIT Rust/WebGPU RTS game/engine. README shows a 35,000-unit demonstration and names large-scale RTS influences. | Reference for army-scale experiments. The demonstration is an upstream claim, not a Dreadmarch benchmark or a verified current-hardware result. |
+| [Oxidator](https://github.com/Ruddle/oxidator) | MIT Rust/WebGPU RTS game/engine. README shows a 35,000-unit demonstration and names large-scale RTS influences. | Reference for army-scale experiments. The demonstration is an upstream claim, not a Direvanity benchmark or a verified current-hardware result. |
 | [Veloren](https://gitlab.com/veloren/veloren/) | GPL-3.0 Rust multiplayer voxel RPG; [official GitHub mirror](https://github.com/veloren/veloren). | Reference for streaming, networking, world simulation and content pipeline. Different world representation and art goals make a wholesale fork a poor initial fit. |
 | [Fish Folk: Jumpy](https://github.com/fishfolk/jumpy) | Rust/Bevy tactical 2D shooter. Source MIT OR Apache-2.0; media CC BY-NC under its [license file](https://github.com/fishfolk/jumpy/blob/main/LICENSE). | Reference for content architecture and local/online play. Code and media have different provenance. |
 | [OpenDiablo2](https://github.com/OpenDiablo2/OpenDiablo2) | Go Diablo II reimplementation; GPL-3.0; archived 2021-12-20. | Historical architecture reference, not a Rust engine base. Its README points to the Abyss Engine split. |
@@ -52,7 +52,7 @@ These are verified upstream versions, not a claim that every candidate has been 
 
 ### Reimplementation is not recompilation
 
-D2Gamma and OpenDiablo2 describe rewritten engines that interpret game data. DevilutionX descends from a recovered Diablo engine. These are different from a generic binary recompiler, and none is a ready-made Diablo IV, Lost Ark or Path of Exile engine. Dreadmarch uses original game content and a reusable engine boundary; asset-format compatibility is a separate possible tooling feature.
+D2Gamma and OpenDiablo2 describe rewritten engines that interpret game data. DevilutionX descends from a recovered Diablo engine. These are different from a generic binary recompiler, and none is a ready-made Diablo IV, Lost Ark or Path of Exile engine. Direvanity uses original game content and a reusable engine boundary; asset-format compatibility is a separate possible tooling feature.
 
 ## Bounded ferrets source audit
 
@@ -70,7 +70,7 @@ Read through the GitHub file API on the research date:
 
 The manifests and math files were read in full; navigation implementation inspection covered the first 180 lines of each named source file. This establishes useful interfaces and candidate behavior, not an exhaustive correctness audit or a proven performance advantage.
 
-**Adoption decision:** prioritize a navigation adapter experiment when obstacle-rich maps enter the slice. The hierarchy, multi-cell footprint and shared-corridor mechanisms are materially more capable than straight-line steering. They also assume ferrets grid, geometry and shape types, so inserting them into a different world representation is an integration task. Importing the entire Bevy 0.18 engine would unnecessarily couple unrelated parts of Dreadmarch.
+**Adoption decision:** prioritize a navigation adapter experiment when obstacle-rich maps enter the slice. The hierarchy, multi-cell footprint and shared-corridor mechanisms are materially more capable than straight-line steering. They also assume ferrets grid, geometry and shape types, so inserting them into a different world representation is an integration task. Importing the entire Bevy 0.18 engine would unnecessarily couple unrelated parts of Direvanity.
 
 The next comparison must include narrow passages, disconnected goals, differing unit sizes, diagonal walls, dynamic obstruction and large formation orders. Compare path validity, full-group completion, deterministic hashes, memory and time against the current implementation using identical requests. Preserve notices and pin a full upstream commit before integration. Never describe an unrun comparison as an optimization.
 

@@ -5,7 +5,7 @@ on:
       tag:
         description: Unique prerelease tag
         required: true
-        default: v0.1.0-alpha.2
+        default: v0.2.0-alpha.1
 permissions:
   contents: read
 env:
@@ -20,10 +20,10 @@ jobs:
         include:
           - os: windows-latest
             platform: windows-x64
-            binary: dreadmarch.exe
+            binary: direvanity.exe
           - os: ubuntu-24.04
             platform: linux-x64
-            binary: dreadmarch
+            binary: direvanity
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: Swatinem/rust-cache@v2.9.3
@@ -48,16 +48,18 @@ jobs:
           export WGPU_BACKEND=vulkan
           export LP_NUM_THREADS=2
           set -o pipefail
-          target/release/dreadmarch --smoke-test --screenshot dist/native-smoke.png | tee dist/native-smoke.log
-          target/release/dreadmarch --campaign-smoke --screenshot dist/native-campaign-smoke.png | tee dist/native-campaign-smoke.log
+          target/release/direvanity --smoke-test --screenshot dist/native-smoke.png | tee dist/native-smoke.log
+          target/release/direvanity --campaign-smoke --screenshot dist/native-campaign-smoke.png | tee dist/native-campaign-smoke.log
       - name: Build shared-simulation browser playtest
         if: runner.os == 'Linux'
         run: |
           python3 scripts/build_web.py
           node tests/web_abi.mjs
-          node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+          node tests/web_controls.mjs dist/Direvanity-playtest.html
           node tests/rpg_abi.mjs
-          node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
+          node tests/rpg_modifiers.mjs
+          node tests/rpg_numeric_boundary.mjs
+          node tests/rpg_controls.mjs dist/Direvanity-campaign.html
       - name: Package native client
         shell: python
         run: |
@@ -65,7 +67,7 @@ jobs:
           root = pathlib.Path('.')
           out = root/'dist'
           out.mkdir(exist_ok=True)
-          name = 'Dreadmarch-${{ matrix.platform }}'
+          name = 'Direvanity-${{ matrix.platform }}'
           stage = out/name
           stage.mkdir(exist_ok=True)
           for path in ['target/release/${{ matrix.binary }}','README.md','LICENSE-MIT','LICENSE-APACHE','THIRD_PARTY.md','dist/THIRD_PARTY_NOTICES.txt']:

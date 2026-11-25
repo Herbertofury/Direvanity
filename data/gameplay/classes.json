@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "design": "Original Dreadmarch adaptation roster; not a claim to implement all source-game abilities.",
+  "design": "Original Direvanity adaptation roster; not a claim to implement all source-game abilities.",
   "classes": [
     {
       "id": "warrior",
@@ -177,7 +177,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Resolve",
+        "color": "#d6b478",
+        "style": "crest",
+        "maximum": 100,
+        "idle_regen_ticks": 12,
+        "combat_regen_ticks": 4,
+        "kill_gain": 5,
+        "description": "Steady recovery accelerates near enemies. Defeats reinforce your resolve."
+      }
     },
     {
       "id": "barbarian",
@@ -354,7 +364,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Fury",
+        "color": "#ef7950",
+        "style": "flame",
+        "maximum": 100,
+        "idle_regen_ticks": 30,
+        "combat_regen_ticks": 3,
+        "kill_gain": 12,
+        "description": "Fury returns slowly at rest and surges in close combat."
+      }
     },
     {
       "id": "paladin",
@@ -531,7 +551,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Conviction",
+        "color": "#f0d991",
+        "style": "sun",
+        "maximum": 100,
+        "idle_regen_ticks": 10,
+        "combat_regen_ticks": 5,
+        "kill_gain": 9,
+        "description": "Facing danger and vanquishing foes strengthen conviction."
+      }
     },
     {
       "id": "crusader",
@@ -708,7 +738,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Wrath",
+        "color": "#e7b16c",
+        "style": "flame",
+        "maximum": 100,
+        "idle_regen_ticks": 14,
+        "combat_regen_ticks": 4,
+        "kill_gain": 11,
+        "description": "Wrath returns swiftly under pressure and through victories."
+      }
     },
     {
       "id": "amazon",
@@ -885,7 +925,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Vigor",
+        "color": "#abd490",
+        "style": "leaf",
+        "maximum": 110,
+        "idle_regen_ticks": 5,
+        "combat_regen_ticks": 7,
+        "kill_gain": 5,
+        "description": "Composure restores vigor; victories return a useful reserve."
+      }
     },
     {
       "id": "rogue",
@@ -1062,7 +1112,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Energy",
+        "color": "#e6cd83",
+        "style": "spark",
+        "maximum": 100,
+        "idle_regen_ticks": 4,
+        "combat_regen_ticks": 5,
+        "kill_gain": 3,
+        "description": "Quick recovery rewards measured bursts and repositioning."
+      }
     },
     {
       "id": "assassin",
@@ -1239,7 +1299,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Momentum",
+        "color": "#b4a1df",
+        "style": "spark",
+        "maximum": 100,
+        "idle_regen_ticks": 10,
+        "combat_regen_ticks": 3,
+        "kill_gain": 7,
+        "description": "Sustained pressure builds momentum much faster than waiting."
+      }
     },
     {
       "id": "demon_hunter",
@@ -1416,7 +1486,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Hatred",
+        "color": "#c488d5",
+        "style": "ember",
+        "maximum": 120,
+        "idle_regen_ticks": 8,
+        "combat_regen_ticks": 5,
+        "kill_gain": 7,
+        "description": "Aggression sustains hatred while a large reserve supports bursts."
+      }
     },
     {
       "id": "monk",
@@ -1593,7 +1673,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Spirit",
+        "color": "#b5ddf0",
+        "style": "mist",
+        "maximum": 100,
+        "idle_regen_ticks": 12,
+        "combat_regen_ticks": 4,
+        "kill_gain": 9,
+        "description": "Pressure and decisive victories sustain your martial rhythm."
+      }
     },
     {
       "id": "sorcerer",
@@ -1772,7 +1862,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Mana",
+        "color": "#6aa9ed",
+        "style": "arcane",
+        "maximum": 120,
+        "idle_regen_ticks": 7,
+        "combat_regen_ticks": 9,
+        "kill_gain": 4,
+        "description": "A deep reservoir recovers faster outside danger."
+      }
     },
     {
       "id": "wizard",
@@ -1949,7 +2049,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Arcane Power",
+        "color": "#a78ae4",
+        "style": "arcane",
+        "maximum": 120,
+        "idle_regen_ticks": 5,
+        "combat_regen_ticks": 6,
+        "kill_gain": 3,
+        "description": "Fast, steady arcane recovery supports deliberate spell sequences."
+      }
     },
     {
       "id": "necromancer",
@@ -2126,7 +2236,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Essence",
+        "color": "#8cd1b6",
+        "style": "soul",
+        "maximum": 120,
+        "idle_regen_ticks": 10,
+        "combat_regen_ticks": 12,
+        "kill_gain": 16,
+        "description": "Defeated enemies replenish your essence reservoir."
+      }
     },
     {
       "id": "witch_doctor",
@@ -2303,7 +2423,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Mana",
+        "color": "#91ca80",
+        "style": "soul",
+        "maximum": 130,
+        "idle_regen_ticks": 10,
+        "combat_regen_ticks": 8,
+        "kill_gain": 13,
+        "description": "Spirits restore a deep mana reservoir when enemies fall."
+      }
     },
     {
       "id": "druid",
@@ -2480,7 +2610,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Primal Spirit",
+        "color": "#a8c776",
+        "style": "leaf",
+        "maximum": 110,
+        "idle_regen_ticks": 9,
+        "combat_regen_ticks": 4,
+        "kill_gain": 8,
+        "description": "Nearby enemies stir primal spirit; victories renew it."
+      }
     },
     {
       "id": "spiritborn",
@@ -2712,7 +2852,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Vigor",
+        "color": "#c9d75c",
+        "style": "leaf",
+        "maximum": 120,
+        "idle_regen_ticks": 8,
+        "combat_regen_ticks": 4,
+        "kill_gain": 8,
+        "description": "Close danger and victories invigorate the guardian bond."
+      }
     },
     {
       "id": "blood_knight",
@@ -2889,7 +3039,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Blood",
+        "color": "#da6885",
+        "style": "blood",
+        "maximum": 100,
+        "idle_regen_ticks": 15,
+        "combat_regen_ticks": 5,
+        "kill_gain": 14,
+        "description": "Combat awakens blood power; fallen enemies return a larger reserve."
+      }
     },
     {
       "id": "tempest",
@@ -3066,7 +3226,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Flow",
+        "color": "#70d8dd",
+        "style": "wave",
+        "maximum": 100,
+        "idle_regen_ticks": 4,
+        "combat_regen_ticks": 4,
+        "kill_gain": 5,
+        "description": "A swift, even current sustains movement and spell combinations."
+      }
     },
     {
       "id": "warlock",
@@ -3243,7 +3413,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Pact",
+        "color": "#b886e8",
+        "style": "void",
+        "maximum": 110,
+        "idle_regen_ticks": 10,
+        "combat_regen_ticks": 7,
+        "kill_gain": 14,
+        "description": "Your pact returns power for defeated enemies and sustained combat."
+      }
     },
     {
       "id": "bard",
@@ -3420,7 +3600,17 @@
           "adaptation_status": "original_prototype_effect",
           "source_scope": "Conceptual class synthesis; exact source abilities are catalogued separately."
         }
-      ]
+      ],
+      "resource": {
+        "name": "Resonance",
+        "color": "#c5a3e5",
+        "style": "wave",
+        "maximum": 100,
+        "idle_regen_ticks": 6,
+        "combat_regen_ticks": 3,
+        "kill_gain": 4,
+        "description": "Combat quickens the cadence of your recovering resonance."
+      }
     }
   ]
 }

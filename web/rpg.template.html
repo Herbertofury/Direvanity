@@ -1,8 +1,85 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Dreadmarch · The Ashen Concord</title><style>__RPG_CSS__</style></head><body>
-<canvas id="world" aria-label="Campaign world. Left click to move or interact; right click to use the selected ability."></canvas>
-<div id="creator" class="overlay creator"><header><a class="wordmark" href="https://github.com/Herbertofury/Dreadmarch" target="_blank" rel="noreferrer">DREADMARCH</a><span class="edition">THE ASHEN CONCORD · SINGLE-PLAYER RPG</span></header><main class="creation-grid"><section class="class-panel"><p class="eyebrow">01 / YOUR CALLING</p><h1>Every legend<br>begins with <em>a choice.</em></h1><p class="muted">Choose a tradition. Make the journey your own.</p><label class="search"><span>Find a class</span><input id="class-search" type="search" placeholder="Paladin, Witch Doctor, Sorcerer…"></label><div id="classes" class="class-grid" role="group" aria-label="Choose class"></div><p class="fine">All 19 class identities remain available. Sorceress shares the Sorcerer identity. Every class supports every body silhouette.</p></section><section class="character-panel"><canvas id="portrait" width="500" height="650" aria-label="Live character appearance preview"></canvas><div class="character-plinth"><p class="eyebrow" id="class-kicker">THE OATHBOUND</p><h2 id="chosen-class">Paladin</h2><p id="class-description"></p><div id="branches" class="branches"></div></div></section><section class="appearance-panel"><p class="eyebrow">02 / YOUR IDENTITY</p><h2>Shape the wanderer.</h2><label>Name<input id="character-name" maxlength="32" value="Wanderer" autocomplete="off"></label><label>Body silhouette<select id="body"><option value="athletic">Athletic</option><option value="slender">Slender</option><option value="stocky">Stocky</option></select></label><label>Hair style<select id="hair-style"><option value="0">Swept</option><option value="1">Cropped</option><option value="2">Long</option><option value="3">Crest</option><option value="4">Braided</option><option value="5">Shaven</option></select></label><div class="color-grid"><label>Skin<input id="skin" type="color" value="#c69b7b"></label><label>Hair<input id="hair" type="color" value="#2d2521"></label><label>Eyes<input id="eyes" type="color" value="#81b7b0"></label><label>Cloth<input id="accent" type="color" value="#d9b66c"></label></div><label>Stature <output id="stature-value">100%</output><input id="stature" type="range" min="85" max="115" value="100"></label><div class="journey-card"><p class="eyebrow">YOUR FIRST CHAPTER</p><h3>The lamps of Hearthmere</h3><p>Find the missing Concord. Cross a haunted moor. Decide what kind of hero returns.</p></div><button id="begin" class="primary" disabled>PREPARING YOUR JOURNEY…</button><label>Saved characters<select id="saved-characters" aria-label="Saved characters"></select></label><button id="continue" class="secondary">Continue saved character</button><button id="import-save" class="secondary">Import character save</button><input id="import-file" type="file" accept=".json,application/json" hidden><p id="creator-status" role="status" class="fine">Loading the embedded Rust engine.</p><p class="fine">Playable campaign foundation. Character art is procedural; production models, faces and animation remain in development.</p></section></main></div>
-<header id="hud" class="game-header hidden"><div><span class="wordmark">DREADMARCH</span><p id="region-name"></p></div><div class="hero-vitals"><strong id="hero-name"></strong><span id="hero-class"></span><div class="vital health"><i id="health-fill"></i><span id="health-label"></span></div><div class="vital focus"><i id="focus-fill"></i><span id="focus-label"></span></div></div><div class="header-actions"><span id="level"></span><span id="gold"></span><button id="pause">Pause</button><button id="save">Save</button><button id="load">Load</button><button id="export">Export save</button></div></header>
-<aside id="quest-panel" class="quest-panel hidden"><p class="eyebrow">THE ASHEN CONCORD</p><h2 id="quest-title">A light in the ashes</h2><p id="quest-text"></p><div id="nearby"></div><div class="side-actions"><button id="journal">Journal <kbd>J</kbd></button><button id="world-map">World <kbd>M</kbd></button><button id="skills">Skills <kbd>K</kbd></button><button id="inventory">Inventory <kbd>I</kbd></button></div></aside>
-<div id="dialogue" class="dialogue hidden" role="status" aria-live="polite"></div><div id="notice" class="toast" role="status"></div><footer id="actionbar" class="actionbar hidden"><div id="skill-slots"></div><div class="action-footer"><span>LEFT CLICK · MOVE / INTERACT</span><span>RIGHT CLICK · SELECTED SKILL</span><button id="help">Controls</button><button id="new-character">New character</button></div></footer>
-<div id="modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><section class="modal-card"><header><div><p class="eyebrow" id="modal-kicker">YOUR JOURNEY</p><h2 id="modal-title"></h2></div><button id="close-modal" aria-label="Close panel">✕</button></header><div id="modal-body"></div></section></div>
-<script>const DREAD_WASM_BASE64="__DREAD_WASM_BASE64__";</script><script>__RPG_JS__</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#101013">
+  <title>Direvanity · The Ashen Concord</title>
+  <style>__RPG_CSS__</style>
+</head>
+<body>
+  <canvas id="world" aria-label="Campaign world. Left click to move or interact; right click to use the selected ability."></canvas>
+  <div id="creator" class="overlay creator">
+    <header>
+      <a class="wordmark" href="https://github.com/Herbertofury/Dreadmarch" target="_blank" rel="noreferrer"><span class="brand-sigil" aria-hidden="true">◈</span>DIREVANITY</a>
+      <span class="edition">THE ASHEN CONCORD <span>·</span> AN OFFLINE ACTION RPG</span>
+    </header>
+    <main class="creation-grid">
+      <section class="class-panel">
+        <p class="eyebrow">I / THE CALLING</p>
+        <h1>Some inherit a crown.<br>Others <em>defy the gods.</em></h1>
+        <p class="muted">Nineteen traditions. One life that is yours to shape.</p>
+        <label class="search"><span>Find a class</span><input id="class-search" type="search" placeholder="Find your calling…" autocomplete="off"></label>
+        <div id="classes" class="class-grid" role="group" aria-label="Choose class"></div>
+        <p class="fine">Every class supports every body silhouette. Sorceress shares the Sorcerer tradition.</p>
+      </section>
+      <section class="character-panel">
+        <div class="portrait-arch" aria-hidden="true"><i></i><i></i><i></i></div>
+        <canvas id="portrait" width="500" height="650" aria-label="Live character appearance preview"></canvas>
+        <div class="character-plinth">
+          <p class="eyebrow" id="class-kicker">THE OATHBOUND</p>
+          <h2 id="chosen-class">Paladin</h2>
+          <p id="class-description"></p>
+          <div id="branches" class="branches"></div>
+          <div id="creator-resource" class="resource-description"></div>
+        </div>
+      </section>
+      <section class="appearance-panel">
+        <p class="eyebrow">II / THE WANDERER</p>
+        <h2>Leave your own mark.</h2>
+        <label>Name<input id="character-name" maxlength="32" value="Wanderer" autocomplete="off"></label>
+        <div class="appearance-pair"><label>Body silhouette<select id="body"><option value="athletic">Athletic</option><option value="slender">Slender</option><option value="stocky">Stocky</option></select></label><label>Hair style<select id="hair-style"><option value="0">Swept</option><option value="1">Cropped</option><option value="2">Long</option><option value="3">Crest</option><option value="4">Braided</option><option value="5">Shaven</option></select></label></div>
+        <div class="color-grid"><label>Skin<input id="skin" type="color" value="#c69b7b"></label><label>Hair<input id="hair" type="color" value="#2d2521"></label><label>Eyes<input id="eyes" type="color" value="#81b7b0"></label><label>Cloth<input id="accent" type="color" value="#d9b66c"></label></div>
+        <label>Stature <output id="stature-value">100%</output><input id="stature" type="range" min="85" max="115" value="100"></label>
+        <div class="journey-card"><p class="eyebrow">YOUR FIRST CHAPTER</p><h3>The lamps of Hearthmere</h3><p>A town on the edge of darkness. An oath buried beneath the moor. A relic that remembers.</p></div>
+        <button id="begin" class="primary" disabled>PREPARING YOUR JOURNEY…</button>
+        <div class="save-collection"><label>Saved characters<select id="saved-characters" aria-label="Saved characters"></select></label><div class="save-actions"><button id="continue" class="secondary">Continue journey</button><button id="import-save" class="secondary">Import save</button></div></div>
+        <input id="import-file" type="file" accept=".json,application/json" hidden>
+        <p id="creator-status" role="status" class="fine">Loading the embedded Rust engine.</p>
+        <p class="fine development-note">Playable development build. Procedural characters and world art; production art and the full campaign remain in development.</p>
+      </section>
+    </main>
+  </div>
+
+  <header id="hud" class="game-header hidden">
+    <div class="game-identity"><span class="wordmark">DIREVANITY</span><p id="region-name"></p><span id="world-state" class="world-state">THE ASHEN FRONTIER</span></div>
+    <div class="hero-identity"><strong id="hero-name"></strong><span id="hero-class"></span><span id="level"></span></div>
+    <div class="header-actions"><span id="gold" title="Coins"></span><button id="pause" title="Pause or resume (Space)">Pause</button><button id="save" title="Save this character">Save</button><button id="load" title="Restore this character’s last save">Load</button><button id="export" title="Download an exact portable save">Export save</button></div>
+  </header>
+
+  <aside id="quest-panel" class="quest-panel hidden">
+    <p class="eyebrow"><span class="quest-mark" aria-hidden="true">✦</span> THE ASHEN CONCORD</p><h2 id="quest-title">A light in the ashes</h2><p id="quest-text"></p><div id="quest-progress" class="quest-progress" aria-label="Main quest progress"></div>
+    <div id="nearby"></div>
+    <div class="side-actions"><button id="journal">Journal <kbd>J</kbd></button><button id="world-map">World <kbd>M</kbd></button><button id="skills">Skills <kbd>K</kbd></button><button id="inventory">Inventory <kbd>I</kbd></button></div>
+  </aside>
+
+  <aside id="map-panel" class="map-panel hidden"><button id="mini-map-open" class="minimap-button" aria-label="Open overworld and local map"><div class="mini-map-frame"><canvas id="mini-map" width="220" height="158" aria-label="Local region map with hero, roads, people and enemies"></canvas><span class="map-north">N</span></div><span id="minimap-caption">HEARTHMERE <kbd>M</kbd></span></button><p id="local-status"></p></aside>
+  <div id="pause-indicator" class="pause-indicator hidden" role="status"><span>Ⅱ</span> THE WORLD IS PAUSED</div>
+  <div id="dialogue" class="dialogue hidden" role="status" aria-live="polite"></div>
+  <div id="notice" class="toast" role="status"></div>
+
+  <footer id="actionbar" class="actionbar hidden">
+    <div class="combat-deck">
+      <div id="health-reservoir" class="reservoir health-reservoir" role="meter" aria-label="Health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="orb-crown" aria-hidden="true">✦</span><div class="orb-shell"><div class="orb-glass"><i id="health-fill" class="orb-fluid"></i><span class="orb-reflection"></span><div class="orb-reading"><strong id="health-value">0</strong><span id="health-maximum">/ 0</span></div></div></div><span class="reservoir-title">VITALITY</span><span id="health-label" class="sr-only"></span></div>
+      <div class="deck-center"><div class="deck-heading"><span id="class-emblem" aria-hidden="true">✦</span><span id="combat-caption">THE OATHBOUND</span><span id="skill-points" class="skill-points"></span></div><div id="skill-slots" role="group" aria-label="Learned active skills"></div><div class="experience-track" role="meter" id="experience-meter" aria-label="Experience to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="experience-fill"></i><span id="experience-label"></span></div></div>
+      <div id="resource-reservoir" class="reservoir resource-reservoir" role="meter" aria-label="Class resource" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span id="resource-symbol" class="orb-crown" aria-hidden="true">✧</span><div class="orb-shell"><div class="orb-glass"><i id="focus-fill" class="orb-fluid"></i><span class="orb-reflection"></span><div class="orb-reading"><strong id="resource-value">0</strong><span id="resource-maximum">/ 100</span></div></div></div><span id="resource-name" class="reservoir-title">FOCUS</span><span id="focus-label" class="sr-only"></span></div>
+    </div>
+    <div class="action-footer"><span>LEFT CLICK <b>MOVE / INTERACT</b></span><span>RIGHT CLICK <b>CAST</b></span><button id="motion-toggle" aria-pressed="false" title="Reduce decorative interface motion">Motion: full</button><button id="help">Controls</button><button id="new-character">Characters</button></div>
+  </footer>
+
+  <div id="modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title"><section class="modal-card"><header><div><p class="eyebrow" id="modal-kicker">YOUR JOURNEY</p><h2 id="modal-title"></h2></div><button id="close-modal" aria-label="Close panel">✕</button></header><div id="modal-body"></div></section></div>
+  <script>const DREAD_WASM_BASE64="__DREAD_WASM_BASE64__";</script>
+  <script>__RPG_JS__</script>
+</body>
+</html>

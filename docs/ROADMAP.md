@@ -1,7 +1,7 @@
 # Production roadmap
 
 Primary product: an offline single-player action RPG. Checked items require implementation and evidence
-in [STATUS.md](STATUS.md). Supported by a dependency does not mean integrated into Dreadmarch.
+in [STATUS.md](STATUS.md). Supported by a dependency does not mean integrated into Direvanity.
 
 ## R0: authoritative RPG foundation
 
@@ -43,18 +43,20 @@ in [STATUS.md](STATUS.md). Supported by a dependency does not mean integrated in
 - [ ] Hierarchical navigation, footprints, avoidance and congestion tests without dropped entities
 - [ ] Source-backed ability research reconciled against exact owned game-data editions where needed
 
-## R3: the massive campaign
+## R3: the massive Direvanity campaign
 
-The proposed planning floor in [ARPG_SYSTEMS.md](research/ARPG_SYSTEMS.md) is a budgetable production
-scope, not delivered content or a playtime promise. Authoring throughput and player testing must support it.
+The accepted expanded production contract is [DIREVANITY_PRODUCTION.md](DIREVANITY_PRODUCTION.md).
+The planning catalogue defines 12 acts, 36 regional groups, 48 faction arcs and eight endgame disciplines.
+Its 134–182 / 108–168 / 144–246 hour budgets are unvalidated production estimates, not delivered hours.
+Authoring throughput and independent player testing must support every future playtime claim.
 
-- [ ] Six acts across twelve major regions with distinct towns, wilderness and dungeon families
+- [ ] Twelve acts across 36 regional groups with distinct towns, wilderness and dungeon families
 - [ ] Main narrative, class-informed dialogue, optional factions, meaningful choices and persistent outcomes
 - [ ] Regional enemy families, extensive boss roster, secrets, puzzles and alternate routes
 - [ ] All 19 class identities with full behaviorally distinct trees, item support and complete playthroughs
 - [ ] Broad shared adventuring talents inspired by original Divine Divinity's cross-class freedom
 - [ ] Extensive itemization and crafting with clear tradeoffs and solo-accessible progression
-- [ ] Endgame exploration/build challenges that fit the single-player world
+- [ ] Eight complementary endgame disciplines that fit the single-player world, without compulsory resets or attendance
 - [ ] Localization, accessibility, settings, recovery and long-duration complete-campaign testing
 
 ## R4: prove the quality and the reusable engine
@@ -62,7 +64,7 @@ scope, not delivered content or a playtime promise. Authoring throughput and pla
 - [ ] Finished scene/encounter benchmark suite against the inspiration quality goals
 - [ ] Art, animation and audio review, blind playtests and measurable usability outcomes
 - [ ] Cross-vendor GPUs, multiple hardware tiers, cold/warm loading and p95/p99 frame pacing
-- [ ] Second distinct game using the engine SDK without Dreadmarch content or rules
+- [ ] Second distinct game using the engine SDK without Direvanity content or rules
 - [ ] Stable documented APIs, examples, content tooling and migration policy
 - [ ] Optional cooperation/networking only after the offline solo campaign requirements remain intact
 

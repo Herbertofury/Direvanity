@@ -1,0 +1,1406 @@
+{
+  "schema_version": 1,
+  "game": "Direvanity",
+  "kind": "production_plan",
+  "status": "planned_not_shipped",
+  "created": "2026-11-25",
+  "duration_evidence": "Unvalidated production estimates. These are goals for authored active play, not measured or guaranteed hours; no shipped-hour claim is permitted.",
+  "targets": {
+    "campaign_min_hours": 100,
+    "side_content_min_hours": 100,
+    "endgame_first_mastery_min_hours": 100,
+    "maximum_hours": null,
+    "repetition_counts_as_authored_content": false,
+    "mandatory_grind": false,
+    "daily_attendance": false,
+    "offline_solo": true
+  },
+  "quality_gates": [
+    "Each content unit has original authored events and an identifiable decision or mastery lesson.",
+    "Travel, idle time, repeated clears and mutually exclusive alternatives do not inflate first-playthrough hour budgets.",
+    "Every choice has visible immediate feedback and at least one persistent consequence.",
+    "All regions and quests have save/reload and migration coverage.",
+    "Every class has end-to-end solo accessibility and distinct resource feedback.",
+    "Hours remain estimates until independent timed playtests publish route, skill, difficulty and active-play distributions.",
+    "No activity, character, item, journal row or map marker is removed to manufacture frame-time improvements."
+  ],
+  "acts": [
+    {
+      "id": "act_01_embers",
+      "number": 1,
+      "title": "The Names Beneath the Ash",
+      "state": "partial",
+      "estimated_active_hours": {
+        "low": 10,
+        "high": 14
+      },
+      "requires": [],
+      "regions": [
+        {
+          "id": "hearthmere_ashlands",
+          "title": "Hearthmere, Hollow Moor and Forgotten Sanctum",
+          "state": "partial",
+          "runtime_regions": [
+            "hearthmere",
+            "hollow_moor",
+            "forgotten_sanctum"
+          ]
+        },
+        {
+          "id": "ember_frontier",
+          "title": "The Ember Frontier",
+          "state": "partial",
+          "runtime_regions": [
+            "ember_coast",
+            "glasswood"
+          ]
+        },
+        {
+          "id": "drowned_archives",
+          "title": "The Drowned Archives",
+          "state": "partial",
+          "runtime_regions": [
+            "drowned_archive"
+          ]
+        }
+      ],
+      "premise": "Recover the Concord and discover that stolen names, not souls, sustain the old divinity.",
+      "central_choice": "Protect the living witnesses or preserve the archive that could save later settlements.",
+      "signature_boss_design": "The Bellkeeper: break resonators in a chosen order while shielding survivors.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_02_harvest",
+      "number": 2,
+      "title": "The Velvet Famine",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 10,
+        "high": 14
+      },
+      "requires": [
+        "act_01_embers"
+      ],
+      "regions": [
+        {
+          "id": "harvest_region_1",
+          "title": "The Saffron Marches",
+          "state": "planned"
+        },
+        {
+          "id": "harvest_region_2",
+          "title": "Hungerfall Orchard",
+          "state": "planned"
+        },
+        {
+          "id": "harvest_region_3",
+          "title": "The Granary of Saints",
+          "state": "planned"
+        }
+      ],
+      "premise": "Trace a miraculous harvest to a covenant that erases families from public memory.",
+      "central_choice": "Break the covenant immediately or dismantle its supply chain without starving the region.",
+      "signature_boss_design": "The Gilded Reaper: trade safe ground against opening damage windows.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_03_mirrors",
+      "number": 3,
+      "title": "A Kingdom of Other Faces",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 11,
+        "high": 15
+      },
+      "requires": [
+        "act_02_harvest"
+      ],
+      "regions": [
+        {
+          "id": "mirrors_region_1",
+          "title": "Veyr, City of Masks",
+          "state": "planned"
+        },
+        {
+          "id": "mirrors_region_2",
+          "title": "The Reflection Coast",
+          "state": "planned"
+        },
+        {
+          "id": "mirrors_region_3",
+          "title": "The Palace Under Glass",
+          "state": "planned"
+        }
+      ],
+      "premise": "Find an heir whose identity is distributed across unwilling hosts.",
+      "central_choice": "Restore one ruler or establish a fragile council of former hosts.",
+      "signature_boss_design": "The Unnamed Regent: identify the real combatant through behavior rather than color.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_04_winter",
+      "number": 4,
+      "title": "The Mercy of Wolves",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 10,
+        "high": 14
+      },
+      "requires": [
+        "act_03_mirrors"
+      ],
+      "regions": [
+        {
+          "id": "winter_region_1",
+          "title": "The Whitewake Pass",
+          "state": "planned"
+        },
+        {
+          "id": "winter_region_2",
+          "title": "Frostwake Refuge",
+          "state": "planned"
+        },
+        {
+          "id": "winter_region_3",
+          "title": "The Ossuary of Summer",
+          "state": "planned"
+        }
+      ],
+      "premise": "Cross a winter kept alive to contain a sleeping war.",
+      "central_choice": "Wake the buried armies to save the refugees or preserve the seal through personal sacrifice.",
+      "signature_boss_design": "The Winter Matron: alternate shelter, pursuit and environmental counterplay.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_05_pilgrims",
+      "number": 5,
+      "title": "The Cathedral That Walks",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 12,
+        "high": 16
+      },
+      "requires": [
+        "act_04_winter"
+      ],
+      "regions": [
+        {
+          "id": "pilgrims_region_1",
+          "title": "The Pilgrim Roads",
+          "state": "planned"
+        },
+        {
+          "id": "pilgrims_region_2",
+          "title": "The Cathedral Caravan",
+          "state": "planned"
+        },
+        {
+          "id": "pilgrims_region_3",
+          "title": "The Moving Reliquary",
+          "state": "planned"
+        }
+      ],
+      "premise": "Follow a living cathedral that consumes towns while promising resurrection.",
+      "central_choice": "Detach its population safely or turn its engine against the hostile divine court.",
+      "signature_boss_design": "Saint on Six Legs: board and disable organs while fighting on a moving arena.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_06_tides",
+      "number": 6,
+      "title": "Where the Dead Keep House",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 11,
+        "high": 15
+      },
+      "requires": [
+        "act_05_pilgrims"
+      ],
+      "regions": [
+        {
+          "id": "tides_region_1",
+          "title": "The Mourning Estuary",
+          "state": "planned"
+        },
+        {
+          "id": "tides_region_2",
+          "title": "Saltglass Harbor",
+          "state": "planned"
+        },
+        {
+          "id": "tides_region_3",
+          "title": "The Drowned Registry",
+          "state": "planned"
+        }
+      ],
+      "premise": "Recover the death ledger from an underwater city whose citizens refuse oblivion.",
+      "central_choice": "Give the dead closure or grant them a costly place among the living.",
+      "signature_boss_design": "The Registrar: interrupt contracts, free bound allies and prevent duplicated debts.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_07_sun",
+      "number": 7,
+      "title": "The Sun Beneath the Mountain",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 12,
+        "high": 16
+      },
+      "requires": [
+        "act_06_tides"
+      ],
+      "regions": [
+        {
+          "id": "sun_region_1",
+          "title": "Cinderhold",
+          "state": "planned"
+        },
+        {
+          "id": "sun_region_2",
+          "title": "The Emberdeep",
+          "state": "planned"
+        },
+        {
+          "id": "sun_region_3",
+          "title": "The Hollow Solar Forge",
+          "state": "planned"
+        }
+      ],
+      "premise": "Find an artificial sun whose fuel comes from stolen possibilities.",
+      "central_choice": "Destroy the forge or transform it into a weaker source the region can sustain.",
+      "signature_boss_design": "The False Dawn: use occluders and heat sinks with distinct melee and ranged routes.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_08_thorns",
+      "number": 8,
+      "title": "A Crown of Living Thorns",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 11,
+        "high": 15
+      },
+      "requires": [
+        "act_07_sun"
+      ],
+      "regions": [
+        {
+          "id": "thorns_region_1",
+          "title": "The Verdigris Courts",
+          "state": "planned"
+        },
+        {
+          "id": "thorns_region_2",
+          "title": "The Rootbound Commons",
+          "state": "planned"
+        },
+        {
+          "id": "thorns_region_3",
+          "title": "The Heartwood Tribunal",
+          "state": "planned"
+        }
+      ],
+      "premise": "Mediate a civil war between a conscious forest and the people who depend on it.",
+      "central_choice": "Enforce borders or negotiate shared stewardship that changes travel and settlements.",
+      "signature_boss_design": "The Thorn Parliament: defeat or persuade rival council organs independently.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_09_silence",
+      "number": 9,
+      "title": "The War of Unspoken Things",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 12,
+        "high": 16
+      },
+      "requires": [
+        "act_08_thorns"
+      ],
+      "regions": [
+        {
+          "id": "silence_region_1",
+          "title": "The Hush Barrens",
+          "state": "planned"
+        },
+        {
+          "id": "silence_region_2",
+          "title": "The Last Signal House",
+          "state": "planned"
+        },
+        {
+          "id": "silence_region_3",
+          "title": "The Fortress of Mouths",
+          "state": "planned"
+        }
+      ],
+      "premise": "Track a weapon that turns language into compulsions and fractures allied factions.",
+      "central_choice": "Destroy the language engine or reclaim it with permanent limits on its owners.",
+      "signature_boss_design": "The Quiet General: read gesture and terrain cues while command channels shift.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_10_stars",
+      "number": 10,
+      "title": "The Witness at the End of Night",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 11,
+        "high": 15
+      },
+      "requires": [
+        "act_09_silence"
+      ],
+      "regions": [
+        {
+          "id": "stars_region_1",
+          "title": "The Starless Steppe",
+          "state": "planned"
+        },
+        {
+          "id": "stars_region_2",
+          "title": "The Fallen Observatory",
+          "state": "planned"
+        },
+        {
+          "id": "stars_region_3",
+          "title": "The Sky Beneath Us",
+          "state": "planned"
+        }
+      ],
+      "premise": "Discover why the first gods needed mortal witnesses to exist.",
+      "central_choice": "Expose the truth to the world or release it through the institutions you preserved.",
+      "signature_boss_design": "The Witness: reconstruct the arena from remembered choices without save rewrites.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_11_siege",
+      "number": 11,
+      "title": "The Siege of Tomorrow",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 12,
+        "high": 16
+      },
+      "requires": [
+        "act_10_stars"
+      ],
+      "regions": [
+        {
+          "id": "siege_region_1",
+          "title": "The Unfinished Capital",
+          "state": "planned"
+        },
+        {
+          "id": "siege_region_2",
+          "title": "The Twelve Gates",
+          "state": "planned"
+        },
+        {
+          "id": "siege_region_3",
+          "title": "The Throne of Borrowed Days",
+          "state": "planned"
+        }
+      ],
+      "premise": "Lead allies earned through the campaign in an assault whose routes reflect their survival.",
+      "central_choice": "Choose which institutions survive; no route requires completing every optional arc.",
+      "signature_boss_design": "The Sovereign of Hours: defeat distinct phase rules, with earned allies changing tactics.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    },
+    {
+      "id": "act_12_uncrowned",
+      "number": 12,
+      "title": "The Last Uncrowned",
+      "state": "planned",
+      "estimated_active_hours": {
+        "low": 12,
+        "high": 16
+      },
+      "requires": [
+        "act_11_siege"
+      ],
+      "regions": [
+        {
+          "id": "uncrowned_region_1",
+          "title": "The Empty Heaven",
+          "state": "planned"
+        },
+        {
+          "id": "uncrowned_region_2",
+          "title": "The Return Roads",
+          "state": "planned"
+        },
+        {
+          "id": "uncrowned_region_3",
+          "title": "Hearthmere Renewed",
+          "state": "planned"
+        }
+      ],
+      "premise": "Confront the source of divine vanity and return to a world that remembers the cost.",
+      "central_choice": "Choose mortal self-rule, a bounded covenant or a plural court through prior actions.",
+      "signature_boss_design": "The Dire Vanity: class-readable multi-phase duel, then a playable world epilogue.",
+      "completion_gate": "Authored critical path, tested save transitions, production art/audio/animation, class coverage and blind playtest sign-off."
+    }
+  ],
+  "side_arcs": [
+    {
+      "id": "lamplighters_01",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "The House That Waited",
+      "state": "planned",
+      "premise": "A house remembers a family that the village cannot; recover evidence without destroying its new residents.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "lamplighters_02",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "Three Lamps for a Traitor",
+      "state": "planned",
+      "premise": "Escort a condemned guide and discover why each witness tells a different truth.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "lamplighters_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "lamplighters_03",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "The Orchard of Small Graves",
+      "state": "planned",
+      "premise": "Identify what is buried beneath a healing orchard before a desperate harvest.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "lamplighters_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "lamplighters_04",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "A Door for the Winter",
+      "state": "planned",
+      "premise": "Build a refugee route whose shelters must survive conflicting local interests.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "lamplighters_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "lamplighters_05",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "The Light We Borrow",
+      "state": "planned",
+      "premise": "Choose who inherits a failing beacon and return to observe the community it creates.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "lamplighters_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "lamplighters_06",
+      "faction": "lamplighters",
+      "faction_name": "The Lamplighters",
+      "title": "The Last Watch",
+      "state": "planned",
+      "premise": "End a generations-long vigil by learning what its guardians were actually protecting.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "lamplighters_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_01",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "A Name Sold Twice",
+      "state": "planned",
+      "premise": "Follow two valid contracts for the same stolen identity and reconcile the competing lives.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_02",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "The Cartographer of Lies",
+      "state": "planned",
+      "premise": "Repair a map that changes the terrain its owner forgets.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "inkbound_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_03",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "The Trial Without a Defendant",
+      "state": "planned",
+      "premise": "Find the person removed from every document in a capital trial.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "inkbound_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_04",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "Seven Versions of a Murder",
+      "state": "planned",
+      "premise": "Reconstruct an event through witnesses whose memories were individually edited.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "inkbound_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_05",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "The Book That Refused an Ending",
+      "state": "planned",
+      "premise": "Rescue a trapped author while choosing which dangerous facts remain public.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "inkbound_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "inkbound_06",
+      "faction": "inkbound",
+      "faction_name": "The Inkbound Archive",
+      "title": "The Index of the Living",
+      "state": "planned",
+      "premise": "Decide how to preserve knowledge without turning citizens into collectible records.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "inkbound_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_01",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "Bread and Iron",
+      "state": "planned",
+      "premise": "Settle a supply dispute by investigating both the mine and the refugee kitchens.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_02",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "The Road Beneath the Road",
+      "state": "planned",
+      "premise": "Open a smuggling route and choose which goods and people may use it.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "free_caravan_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_03",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "The Merchant of Last Chances",
+      "state": "planned",
+      "premise": "Expose a trader who buys futures while protecting those depending on his credit.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "free_caravan_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_04",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "The Broken Wheel Parliament",
+      "state": "planned",
+      "premise": "Resolve a caravan election through travel, testimony and an optional duel.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "free_caravan_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_05",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "A Fare Without Coin",
+      "state": "planned",
+      "premise": "Honor a dead courier by completing deliveries with conflicting moral costs.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "free_caravan_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "free_caravan_06",
+      "faction": "free_caravan",
+      "faction_name": "The Free Caravan",
+      "title": "The Market After Midnight",
+      "state": "planned",
+      "premise": "Dismantle a predatory exchange or take over its infrastructure for a public market.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "free_caravan_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_01",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "The Saint Who Surrendered",
+      "state": "planned",
+      "premise": "Find why a celebrated defender laid down their weapon during a massacre.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_02",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "A Shield for the Guilty",
+      "state": "planned",
+      "premise": "Protect an accused officer until their testimony can be independently tested.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "ashen_order_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_03",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "The Tithe of Courage",
+      "state": "planned",
+      "premise": "Recover recruits coerced into a ritual that consumes fear and empathy together.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "ashen_order_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_04",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "The Last Honest Duel",
+      "state": "planned",
+      "premise": "Arrange a public reckoning where evidence can replace combat.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "ashen_order_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_05",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "An Oath With No King",
+      "state": "planned",
+      "premise": "Help a knight choose a new obligation after their sovereign is exposed.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "ashen_order_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "ashen_order_06",
+      "faction": "ashen_order",
+      "faction_name": "The Ashen Order",
+      "title": "The Armor We Leave Behind",
+      "state": "planned",
+      "premise": "Resolve succession of a sacred armory based on what the order has become.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "ashen_order_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_01",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "The Village in the Antlers",
+      "state": "planned",
+      "premise": "Investigate a migrating beast carrying a community that cannot safely dismount.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_02",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "The Poison That Heals",
+      "state": "planned",
+      "premise": "Trace a cure with an ecological cost and find a sustainable alternative.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "green_covenant_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_03",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "The Gardener of Ruins",
+      "state": "planned",
+      "premise": "Rebuild a damaged watershed while rival settlements contest the water.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "green_covenant_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_04",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "A Child of Two Seasons",
+      "state": "planned",
+      "premise": "Protect a child whose seasonal changes expose an old land bargain.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "green_covenant_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_05",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "The Feast of Roots",
+      "state": "planned",
+      "premise": "Mediate a famine when sentient crops refuse their harvest.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "green_covenant_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "green_covenant_06",
+      "faction": "green_covenant",
+      "faction_name": "The Green Covenant",
+      "title": "The Forest Remembers",
+      "state": "planned",
+      "premise": "Return to prior choices and negotiate a lasting compact with the living landscape.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "green_covenant_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_01",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "The Widow and the Tide",
+      "state": "planned",
+      "premise": "Recover a shipwreck ledger that contradicts a family legend.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_02",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "A Funeral for the Sea",
+      "state": "planned",
+      "premise": "Discover why a harbor is holding a funeral for a living ocean spirit.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "salt_court_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_03",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "The Debt of Drowned Men",
+      "state": "planned",
+      "premise": "Release sailors bound by salvage contracts without stranding their dependents.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "salt_court_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_04",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "The Ship That Came Home Empty",
+      "state": "planned",
+      "premise": "Explore a returning vessel whose crew occupies the wrong reflections.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "salt_court_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_05",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "The Pearl Tribunal",
+      "state": "planned",
+      "premise": "Choose admissible evidence in a dispute between surface and drowned citizens.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "salt_court_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "salt_court_06",
+      "faction": "salt_court",
+      "faction_name": "The Salt Court",
+      "title": "The Harbor Without Masters",
+      "state": "planned",
+      "premise": "Determine who governs the rebuilt port after its old bargains collapse.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "salt_court_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_01",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "The Apprentice Who Made Rain",
+      "state": "planned",
+      "premise": "Rescue an inventor whose success threatens the local fuel monopoly.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_02",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "A Hammer for the Bell",
+      "state": "planned",
+      "premise": "Recover a forge tool and decide whether its first repair serves war or shelter.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "cinder_guild_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_03",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "The Workers Beneath the Furnace",
+      "state": "planned",
+      "premise": "Expose an unsafe power source while maintaining essential heat.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "cinder_guild_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_04",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "The Weight of a Perfect Blade",
+      "state": "planned",
+      "premise": "Trace an unbeatable weapon to the stolen skills of missing artisans.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "cinder_guild_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_05",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "The Machine That Prayed",
+      "state": "planned",
+      "premise": "Investigate a device showing agency and protect both its workers and its autonomy.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "cinder_guild_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "cinder_guild_06",
+      "faction": "cinder_guild",
+      "faction_name": "The Cinder Guild",
+      "title": "The Forge Belongs to No One",
+      "state": "planned",
+      "premise": "Create a lasting charter for a powerful workshop and test it under crisis.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "cinder_guild_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_01",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "The Tavern at the Wrong Crossroads",
+      "state": "planned",
+      "premise": "Resolve travelers arriving from incompatible histories without choosing a convenient victim.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_02",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "A Song for the Enemy",
+      "state": "planned",
+      "premise": "Carry a forbidden melody through hostile towns and learn what it records.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "wayfarers_01"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_03",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "The Companion Who Forgot You",
+      "state": "planned",
+      "premise": "Rebuild trust with a traveler whose memories were sold to save someone else.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "wayfarers_02"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_04",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "The Village Outside the Map",
+      "state": "planned",
+      "premise": "Find a hidden settlement and decide whether discovery helps or endangers it.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "wayfarers_03"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_05",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "The Dragon of Little Things",
+      "state": "planned",
+      "premise": "Investigate small thefts that reveal a creature preserving a disappearing culture.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "wayfarers_04"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    },
+    {
+      "id": "wayfarers_06",
+      "faction": "wayfarers",
+      "faction_name": "The Uncrowned Wayfarers",
+      "title": "The Long Way Home",
+      "state": "planned",
+      "premise": "Resolve companion obligations through revisits that materially change earlier places.",
+      "estimated_active_hours": {
+        "low": 2.25,
+        "high": 3.5
+      },
+      "episode_count_target": 4,
+      "requires": [
+        "wayfarers_05"
+      ],
+      "consequence_gate": "Author at least two feasible resolutions; show a persistent social or environmental consequence without blocking the main campaign.",
+      "replay_budget_included": false
+    }
+  ],
+  "endgame_disciplines": [
+    {
+      "id": "shattered_concord",
+      "title": "Shattered Concord Expeditions",
+      "state": "partial",
+      "premise": "Selectable deterministic seed, evolving contracts, recovery exits and earned rewards; existing prototype expands here.",
+      "loop": "Recover relics, dismantle anchors, rescue witnesses, defeat wardens, then deliberately return.",
+      "estimated_first_mastery_hours": {
+        "low": 20,
+        "high": 35
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions.",
+      "runtime_regions": [
+        "expedition"
+      ]
+    },
+    {
+      "id": "reclamation",
+      "title": "World Reclamation",
+      "state": "planned",
+      "premise": "Repair and transform damaged regions through authored local consequences.",
+      "loop": "Choose civic projects, negotiate surviving factions and defend meaningful infrastructure.",
+      "estimated_first_mastery_hours": {
+        "low": 18,
+        "high": 30
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "reliquaries",
+      "title": "Living Reliquaries",
+      "state": "planned",
+      "premise": "Explore persistent multi-floor dungeons with route choices and ecological changes.",
+      "loop": "Read dungeon rules, open shortcuts, manage optional risks and reach authored guardians.",
+      "estimated_first_mastery_hours": {
+        "low": 20,
+        "high": 35
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "nemeses",
+      "title": "Oathbound Nemeses",
+      "state": "planned",
+      "premise": "Pursue recurring rivals with authored growth and bounded deterministic adaptations.",
+      "loop": "Investigate, prepare counters, resolve allies and defeat or reconcile the rival.",
+      "estimated_first_mastery_hours": {
+        "low": 16,
+        "high": 28
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "mastery",
+      "title": "Class Mastery Pilgrimages",
+      "state": "planned",
+      "premise": "Behavioral tests tailored to each class, with every class remaining solo viable.",
+      "loop": "Demonstrate control, defense, delivery and resource mastery to unlock sidegrades.",
+      "estimated_first_mastery_hours": {
+        "low": 18,
+        "high": 30
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "boss_covenants",
+      "title": "Boss Covenants",
+      "state": "planned",
+      "premise": "Replay authored bosses with chosen mechanic changes and clear reward pools.",
+      "loop": "Select readable covenant rules and earn deterministic progress toward targeted gear.",
+      "estimated_first_mastery_hours": {
+        "low": 18,
+        "high": 30
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "deepcraft",
+      "title": "The Great Works",
+      "state": "planned",
+      "premise": "Pursue rare build transformations through exploration, crafting and narrative contracts.",
+      "loop": "Target a build, source materials from varied activities and preview every recipe outcome.",
+      "estimated_first_mastery_hours": {
+        "low": 16,
+        "high": 28
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    },
+    {
+      "id": "chronicles",
+      "title": "World Chronicles",
+      "state": "planned",
+      "premise": "Replay world crises under selected histories without overwriting the main campaign save.",
+      "loop": "Choose a chronicle, understand changed rules, resolve its ending and retain account records.",
+      "estimated_first_mastery_hours": {
+        "low": 18,
+        "high": 30
+      },
+      "repeatable_after_mastery": true,
+      "retention_gate": "No daily lockout, forced reset, mandatory season or escalating grind used as a substitute for new decisions."
+    }
+  ]
+}

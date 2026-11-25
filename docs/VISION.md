@@ -1,4 +1,4 @@
-# Dreadmarch: the ambition
+# Direvanity: the ambition
 
 An original, massive, character-led single-player action RPG and a reusable Rust engine.
 Founded 24 November 2026; RPG direction accepted 25 November 2026 (America/Denver).
@@ -17,7 +17,7 @@ complete the story or develop a satisfying build. Optional future modes must res
 
 ## Great inspirations
 
-| Inspiration | What we study | Original Dreadmarch direction |
+| Inspiration | What we study | Original Direvanity direction |
 | --- | --- | --- |
 | Divine Divinity (2002) | A continuous, explorable role-playing world, secrets, quests and freedom across skill Ways | Authored towns and wilderness, reactive quests, useful noncombat talents and persistent discoveries |
 | Diablo I / Hellfire | Atmosphere, danger, readable archetypes and shared magical knowledge | Distinct legacy identities, purposeful exploration and consequential encounters |
@@ -66,7 +66,7 @@ art, animation, audio, usability, build diversity, stability and measured player
 | Streaming | Prepared shaders and smooth traversal across authored regions | Cold/warm traces, I/O, memory and VRAM measurements |
 | Reliability | Validated/migrated saves, deterministic game rules, crash recovery | Fault injection, long campaigns, cross-platform and corruption tests |
 | Accessibility | Rebinding, controller support, UI scale, color-independent cues, reduced effects | Input/readability/contrast testing and user review |
-| Reuse | A second game can use engine services without Dreadmarch content | Separate package, build, tests and runtime proof |
+| Reuse | A second game can use engine services without Direvanity content | Separate package, build, tests and runtime proof |
 
 The current three-region procedural prologue establishes a real loop. Production models, advanced
 animation, extensive narrative content, deep itemization and the measured quality targets remain work.

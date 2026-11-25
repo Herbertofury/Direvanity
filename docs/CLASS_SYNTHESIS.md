@@ -1,6 +1,6 @@
 # Original class synthesis
 
-This is the design bridge from the source-backed atlases to original Dreadmarch gameplay. Source abilities are studied as mechanics; Dreadmarch uses its own names, balance, visual language, execution code and world. Every source edition retains its own coverage ledger. A historical rune is not silently presented as a current skill, and a data record is not called an implemented mechanic.
+This is the design bridge from the source-backed atlases to original Direvanity gameplay. Source abilities are studied as mechanics; Direvanity uses its own names, balance, visual language, execution code and world. Every source edition retains its own coverage ledger. A historical rune is not silently presented as a current skill, and a data record is not called an implemented mechanic.
 
 ## The class roster stays broad
 
@@ -40,9 +40,9 @@ All 19 researched class identities remain selectable. Closely related traditions
 
 ## Original Divine Divinity: freedom outside the class tree
 
-The original game allows cross-Way learning. Dreadmarch should preserve that sense of an adventurer who can learn broadly without making every combat class identical. Add a shared adventuring layer for identification, lore, repair/crafting, trading, locks, traps, stealth and environmental interaction. Its costs, quest rewards and alternative routes must be authored and tested alongside combat. See the Divinity atlas for the exact original 88 ordinary + 8 Divine + 3 innate breakdown.
+The original game allows cross-Way learning. Direvanity should preserve that sense of an adventurer who can learn broadly without making every combat class identical. Add a shared adventuring layer for identification, lore, repair/crafting, trading, locks, traps, stealth and environmental interaction. Its costs, quest rewards and alternative routes must be authored and tested alongside combat. See the Divinity atlas for the exact original 88 ordinary + 8 Divine + 3 innate breakdown.
 
-The late Divine path suggests a major story-earned progression layer. An original Dreadmarch ascension can change traversal, perception, spirit interaction or high-impact combat after a consequential campaign event. It should not be an unexplained second passive grid that appears before the story earns it.
+The late Divine path suggests a major story-earned progression layer. An original Direvanity ascension can change traversal, perception, spirit interaction or high-impact combat after a consequential campaign event. It should not be an unexplained second passive grid that appears before the story earns it.
 
 Later Divinity contributes explicit surfaces, status interactions, crafted hybrid skills and conditional dialogue. Introduce a small, internally complete interaction set in the first production region, then expand it through content validation. Do not copy turn-based encounter pacing directly into real-time action.
 

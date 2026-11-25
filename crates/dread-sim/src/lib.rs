@@ -733,7 +733,7 @@ impl World {
                 return Err(fail("Save has duplicate or invalid unit identities."));
             }
             if unit.hp <= 0
-                || unit.max_hp != unit.kind.stats().hp
+                || unit.max_hp != self.stats_for(unit).hp
                 || unit.hp > unit.max_hp
                 || unit.attack_cooldown > unit.kind.stats().attack_interval
             {

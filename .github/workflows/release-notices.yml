@@ -35,7 +35,7 @@ jobs:
           python3 scripts/collect_notices.py --allow-incomplete
       - name: Download existing verified packages
         run: |
-          gh release download "$RELEASE_TAG" --pattern 'Dreadmarch-*-x64.zip' --dir release-notices
+          gh release download "$RELEASE_TAG" --pattern '*-*-x64.zip' --dir release-notices
           gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" --jq .sha > release-notices/source-commit.txt
       - name: Add notices while preserving every binary byte
         shell: python
@@ -46,14 +46,14 @@ jobs:
           provenance = pathlib.Path('THIRD_PARTY.md').read_bytes()
           receipt = {'schema': 1, 'source_commit': (root/'source-commit.txt').read_text().strip(),
                      'notices_sha256': hashlib.sha256(notices).hexdigest(), 'packages': []}
-          packages = sorted(root.glob('Dreadmarch-*-x64.zip'))
+          packages = sorted(list(root.glob('Dreadmarch-*-x64.zip')) + list(root.glob('Direvanity-*-x64.zip')))
           assert len(packages) == 2, 'Expected Windows and Linux packages'
           for package in packages:
               before = hashlib.sha256(package.read_bytes()).hexdigest()
               with zipfile.ZipFile(package) as z:
                   items = [(info, z.read(info.filename)) for info in z.infolist()]
               binaries = {info.filename: hashlib.sha256(data).hexdigest() for info, data in items
-                          if pathlib.PurePosixPath(info.filename).name in ('dreadmarch', 'dreadmarch.exe')}
+                          if pathlib.PurePosixPath(info.filename).name in ('dreadmarch', 'dreadmarch.exe', 'direvanity', 'direvanity.exe')}
               assert len(binaries) == 1
               prefix = package.stem + '/'
               with zipfile.ZipFile(package, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:

@@ -31,7 +31,7 @@ for key, value in {
     html = html.replace(key, value)
 dist = root/'dist'
 dist.mkdir(exist_ok=True)
-output = dist/'Dreadmarch-playtest.html'
+output = dist/'Direvanity-playtest.html'
 output.write_text(html, encoding='utf-8')
 receipt = {'wasm_bytes':len(data), 'wasm_sha256':hashlib.sha256(data).hexdigest(),
            'html_bytes':output.stat().st_size,'html_sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
@@ -46,10 +46,15 @@ for key, value in {
     '__DREAD_WASM_BASE64__': base64.b64encode(data).decode(),
 }.items():
     rpg = rpg.replace(key, value)
-rpg_output = dist/'Dreadmarch-campaign.html'
+rpg_output = dist/'Direvanity-campaign.html'
 rpg_output.write_text(rpg, encoding='utf-8')
 campaign_receipt = {'campaign': str(rpg_output), 'bytes': rpg_output.stat().st_size,
                     'sha256': hashlib.sha256(rpg_output.read_bytes()).hexdigest(),
                     'wasm_sha256': hashlib.sha256(data).hexdigest()}
 (dist/'campaign-build.json').write_text(json.dumps(campaign_receipt, indent=2)+'\n', encoding='utf-8')
 print(json.dumps(campaign_receipt))
+
+# Keep old offline filenames working for existing scripts and saved file-origin slots.
+# Both names contain identical current bytes and the same authoritative Rust engine.
+shutil.copyfile(output, dist/'Dreadmarch-playtest.html')
+shutil.copyfile(rpg_output, dist/'Dreadmarch-campaign.html')

@@ -65,9 +65,33 @@ pub extern "C" fn campaign_locations() -> usize {
             .world
             .campaign
             .as_ref()
-            .map(|c| dread_sim::rpg::points_of_interest(&c.region))
+            .map(dread_sim::rpg::campaign_points_of_interest)
             .unwrap_or_default();
         bridge.output = serde_json::to_vec(&points).expect("valid locations");
+        bridge.output.len()
+    })
+}
+
+/// Authoritative journal objectives, including oath, side quests and expedition state.
+#[unsafe(no_mangle)]
+pub extern "C" fn campaign_journal() -> usize {
+    BRIDGE.with(|bridge| {
+        let mut bridge = bridge.borrow_mut();
+        let entries = bridge
+            .world
+            .campaign
+            .as_ref()
+            .map(dread_sim::rpg::journal)
+            .unwrap_or_default();
+        bridge.output = serde_json::to_vec(&entries).expect("valid journal");
+        bridge.output.len()
+    })
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn campaign_atlas() -> usize {
+    BRIDGE.with(|bridge| {
+        let mut bridge = bridge.borrow_mut();
+        bridge.output = serde_json::to_vec(&dread_sim::rpg::atlas()).expect("valid atlas");
         bridge.output.len()
     })
 }
