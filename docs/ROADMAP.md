@@ -14,7 +14,7 @@ in [STATUS.md](STATUS.md). Supported by a dependency does not mean integrated in
 - [x] Three connected persistent regions, dialogue, complete main quest and side quest
 - [x] Independent browser character slots, save/resume, export and import
 - [x] Every class completes both quests through actual public commands
-- [ ] Native creator/campaign integration, release build and actual runtime evidence
+- [x] Native creator/campaign integration, release build and actual runtime evidence
 - [ ] Actual browser visual/input review and complete published RPG artifact
 
 ## R1: one production-quality region

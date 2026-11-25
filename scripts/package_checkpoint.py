@@ -41,6 +41,13 @@ for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
              'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
+# Preserve optimized CI and freshly extracted-package evidence under their
+# source-specific paths. Never overwrite the separate development-build proof.
+for folder in ['release-alpha2/linux-ci', 'release-alpha2/windows-ci',
+               'release-alpha2/extracted-runtime']:
+    for path in sorted((root/'dist'/folder).glob('*')):
+        if path.is_file() and path.suffix in {'.json', '.log', '.png'}:
+            files.append((path, 'verification/'+folder+'/'+path.name))
 if args.native:
     native = args.native.resolve()
     if not native.is_file(): raise SystemExit('Native binary is missing.')

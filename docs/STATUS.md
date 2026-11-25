@@ -67,8 +67,10 @@ clock rollback, defeated-save camera initialization and presentation scheduling 
 - [Pages run 45657139297](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657139297) deployed
   source `1558e58`. Browser source is unchanged in `a96d473`; live review verified modal focus
   wrapping, inert background, Escape focus restoration, prior pause preservation and creator/resume.
-  The subsequent text-only correction removes a stale instruction to finish Iven after both quests
-  are complete; packaged campaign controls still pass.
+  [Pages run 45660608035](https://github.com/Herbertofury/Dreadmarch/actions/runs/45660608035) then
+  deployed `f1e5271`, including the objective-text correction. Both saved character slots survived;
+  the level-6 Witch Doctor restored with both quests complete, 289 coins, ten kills and four items.
+  The corrected journal was visually reviewed; packaged campaign controls still pass.
 - Structural DOM/Canvas tests establish control behavior, not visual quality. Actual browser review
   and native rendered captures are recorded separately.
 
@@ -82,8 +84,18 @@ records. Research entries are not counted as implemented Dreadmarch abilities.
 ## Release and complete artifact
 
 Release build run [45657992875](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657992875)
-is producing optimized Windows/Linux packages from `a96d473`. Exact package verification, publication
-and complete archive readback are the remaining distribution steps for this checkpoint.
+builds optimized Windows/Linux packages from `a96d473`. The Linux job passed and its exact ZIP
+was downloaded through the GitHub artifact connector, integrity checked and safely extracted.
+All 25 packaged files were hashed; the three research catalogues match the worktree and both source
+revisions. The Linux binary retains executable mode `0755` and requires glibc 2.35 or later.
+
+The extracted optimized Linux executable exited **0** after the independent campaign smoke: 185
+frames, tick 354, ten command checks, exact save roundtrip, HUD validation and captured images.
+Checksum `21debfd8d94ba33c` matches the optimized CI campaign result. Both 1440 × 900 captures were
+visually reviewed. `rpg-extracted-native-receipt.json` preserves package and binary hashes, every
+extracted file hash, CI smoke results and the independent run. Development, CI and extracted-package
+evidence remain separate. Windows package completion, publication and the complete archive readback
+are the remaining distribution steps for this checkpoint.
 
 ## Production work remains
 
