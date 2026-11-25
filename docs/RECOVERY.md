@@ -1,5 +1,40 @@
 # Development environment recovery
 
+## Current RPG continuation — 25 November 2026
+
+Resume from [STATUS.md](STATUS.md), [RPG_DIRECTION.md](RPG_DIRECTION.md) and
+[CLASS_SYNTHESIS.md](CLASS_SYNTHESIS.md). The primary product is an offline single-player ARPG.
+The legacy RTS is an optional regression scenario. The older records below preserve environment
+repairs and alpha.1 provenance; they are not the current product milestone or release binaries.
+
+- Public release: `v0.1.0-alpha.2`, tag commit `e4a6e9c971ead55ecc2569fb1d931f33a3522eb6`.
+- Tested Rust/native source: `a96d473d834dac66b0c0f0977300ed6dca45899e`.
+- Final browser text/deployment source: `f1e52718899cc621177bf84420a64cbf75910903`.
+- Full CI: `45657960569`; optimized release: `45657992875`; final Pages: `45660608035`.
+- Nineteen classes, 174 original nodes and three persistent regions are implemented. Full versioned
+  research catalogues and their coverage boundaries are already committed; do not redo that inventory.
+- Actual browser main/side-quest playthrough, all 19 public-command campaign playthroughs, native
+  creator/campaign rendering and freshly extracted optimized Linux execution have passed.
+- Current Linux binary: `95755e96f4e10b025de6ae011b90cc3769f2f9c04685861c7f9305e42b4840c4`.
+- Current Windows binary: `ebcf6ca79a6f4c87b872c02d07ecd47da9e6411a12c614914f8cd7fe46683349`.
+- Windows text was restored from exact Git blobs after CRLF checkout conversion; binary identity
+  was preserved. Its distribution receipt retains the original CI artifact/package hashes.
+- `CHECKPOINT.json` records the exact complete-archive source revision. The release asset
+  `Dreadmarch-delivery.json` records independent archive validation and post-transfer full readback.
+
+**Exact next implementation boundary:** R1's typed ability timeline and one complete class combat
+loop in an authored region, then the contrasting-class vertical slice. Implement real targeting,
+windup/commit/recovery, projectile/chain delivery, class resources and signature mechanics; preserve
+all 19 creator choices and extend each class through explicit coverage tasks. Original rigged art,
+branching quests, itemization and hardware performance remain production work. Do not restart an
+RTS-first milestone or treat procedural visuals as finished production quality.
+
+Use `source /workspace/scratch/f01d9d0c81e4/toolchain/env.sh` for the restored local Rust toolchain.
+The scoped Vulkan environment below remains valid while its files and host are unchanged. Download
+CI artifacts through the dedicated GitHub artifact-download operation, then verify the provider and
+inner-package digests. Do not repeat the blocked browser artifact handoff, the installation-token
+release-create HTTP403 route, or the unchanged Xvfb/AF_UNIX failure.
+
 ## Rootless Debian runtime packages and offscreen Vulkan
 
 Recorded 2026-11-24, America/Denver. This entry covers development-runner provisioning, not a game performance result.
@@ -71,13 +106,14 @@ The package prefix is reproducible build-runner material and does not belong in 
 
 Reassess this route if the base OS, architecture, Mesa/LLVM linkage, Vulkan loader or socket capability changes. Do not assume that a different runner shares the X11 restriction.
 
-The finite native offscreen game gate is now complete. Both the development executable and the
-freshly extracted optimized portable Linux artifact rendered the scene and complete HUD, captured
-a 1440 × 900 PNG, and passed the 120-frame gameplay/save smoke. Reuse the scoped environment for
-future rendering regressions rather than repeating provisioning. The next implementation work is
-M1 combat and navigation, with Windows target-hardware capture still outstanding.
+The native offscreen gates are complete for both the RPG campaign and legacy encounter. The
+current extracted optimized Linux campaign run exited 0 at 185 frames/tick 354 with ten command
+checks, exact save roundtrip and validated HUD; checksum `21debfd8d94ba33c`. Its 1440 × 900 creator
+and campaign captures were reviewed. The separate legacy smoke passed 120 frames and three
+commands. Reuse this environment rather than reprovisioning; continue the R1 RPG work above.
+Windows target-hardware rendering and input capture remain outstanding.
 
-## Portable Linux release baseline
+## Historical alpha.1 portable Linux baseline
 
 Recorded 2026-11-25 UTC. The first optimized Linux build used `ubuntu-latest`. Its CI renderer smoke
 passed, but the downloaded executable failed on the Debian 13 validation host before initialization
@@ -111,20 +147,20 @@ DREADMARCH_RENDER_SMOKE_OK frames=120 tick=120 units=12 checksum=4d08544a95f6c63
 
 The new screenshot was visually inspected. Exact hashes, paths, CI provenance, host details and
 verification limits are recorded in `dist/portable-verified/receipt.json`; the accompanying log and
-PNG are in the same directory. [STATUS.md](STATUS.md#native-release-evidence) retains the key public
+PNG are in the same directory. [HISTORY_ALPHA1.md](HISTORY_ALPHA1.md) retains the key public
 evidence. Do not reuse the rejected Ubuntu-latest executable or count its CI-only smoke as the
 portable artifact result.
 
 ## Windows runtime dependency
 
-The optimized Windows x64 package contains a 76,246,528-byte executable built from
-`780eec867be4bfd1b910cfb11f091c0475e73ce8`, SHA-256
-`81894e9ff5549508f405975a7ea6d7b0977dcaef26b65dd6fcdf36c2db239470`. Its PE imports include
+The alpha.2 Windows x64 package contains a 76,911,616-byte executable built from
+`a96d473d834dac66b0c0f0977300ed6dca45899e`, SHA-256
+`ebcf6ca79a6f4c87b872c02d07ecd47da9e6411a12c614914f8cd7fe46683349`. Its PE imports include
 `VCRUNTIME140.dll`. If Windows reports that DLL missing, install the
 [official Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe), then launch
 the game again. Consult [Microsoft's supported-runtime guide](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/)
 for the current runtime requirements. No Microsoft runtime DLLs are bundled with the game.
 
-Windows CI passed the native build, strict Clippy and three regression tests. These are distinct
+Windows CI passed the native build, strict Clippy and four regression tests. These are distinct
 from running the game through a Windows graphics driver; Windows GPU runtime and interactive
-windowed-input verification remain part of M1's hardware capture work.
+windowed-input verification remain part of R1's hardware capture work.
