@@ -2211,14 +2211,14 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "dread-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "dread-headless"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dread-core",
  "dread-sim",
@@ -2227,7 +2227,7 @@ dependencies = [
 
 [[package]]
 name = "dread-sim"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dread-core",
  "serde",
@@ -2236,7 +2236,7 @@ dependencies = [
 
 [[package]]
 name = "dread-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dread-sim",
  "serde_json",
@@ -2244,7 +2244,7 @@ dependencies = [
 
 [[package]]
 name = "dreadmarch-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bevy",
  "dread-sim",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "engine-lab"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dread-core",
  "serde_json",

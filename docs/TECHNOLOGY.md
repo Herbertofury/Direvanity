@@ -4,7 +4,7 @@ Dependency selection checkpoint: **2026-11-24**, America/Denver. Product directi
 
 ## Decision
 
-Build Dreadmarch as an original, offline single-player action RPG backed by a reusable Rust engine SDK. The primary experience is a personally created character, distinct classes and progression, responsive combat, exploration, quests and a large authored campaign. Keep the authoritative simulation independent of graphics, windowing, audio, UI and the first game's content. Use modern upstream components where they provide a better verified result than a new implementation.
+Build Direvanity as an original, offline single-player action RPG backed by a reusable Rust engine SDK. The primary experience is a personally created character, distinct classes and progression, responsive combat, exploration, quests and a large authored campaign. Keep the authoritative simulation independent of graphics, windowing, audio, UI and the first game's content. Use modern upstream components where they provide a better verified result than a new implementation.
 
 The selected native technology target is **Rust 1.100.0, edition 2024; Bevy 0.20.1; and the wgpu 30 dependency family used by Bevy**. Published metadata verifies that Bevy 0.20.1 requires at least Rust 1.97.1. Upstream wgpu 30.0.2 is current at this checkpoint. [Rust releases](https://blog.rust-lang.org/releases/), [Bevy manifest](https://docs.rs/crate/bevy/latest/source/Cargo.toml.orig), [Bevy renderer dependencies](https://docs.rs/crate/bevy_render/latest), [wgpu releases](https://github.com/gfx-rs/wgpu/releases).
 
@@ -23,7 +23,7 @@ The upstream landscape and source-level reuse assessment are recorded in [RESEAR
 | Layer | Owns | Must remain independent of |
 | --- | --- | --- |
 | Simulation | Ticks, entity identities, commands, movement, ability timing/delivery, combat resolution, deterministic randomness, authoritative state | Render frame rate, wall-clock timing, GPU state, device input APIs |
-| Engine SDK | Shared simulation services, scenario/configuration interfaces, event/snapshot APIs, persistence boundaries | Dreadmarch faction names, campaign scripts and specific item identities |
+| Engine SDK | Shared simulation services, scenario/configuration interfaces, event/snapshot APIs, persistence boundaries | Direvanity faction names, campaign scripts and specific item identities |
 | Game rules/content | Player characters, classes, resource rules, skills, enemies, progression, items, quests, encounters and campaign content | A single renderer implementation |
 | Presentation | Camera, materials, animation, particles, audio, targeting feedback, character creation and UI | Ownership of authoritative outcomes |
 | Tools | Content validation, profiling, replay inspection, asset processing and editing | Hidden changes to gameplay rules during a verified run |
@@ -102,7 +102,7 @@ Optimization preserves the complete requested workload. Do not introduce entity 
 
 ## Next material architecture experiment
 
-Extend the running campaign with a production-oriented **ability timeline, delivery model and class resource system** in the reusable Rust core. Keep generic timing, targeting, delivery and resource operations separate from Dreadmarch's authored class definitions. Animation, sound and effects should follow authoritative events so that native and WASM presentations cannot produce different combat outcomes.
+Extend the running campaign with a production-oriented **ability timeline, delivery model and class resource system** in the reusable Rust core. Keep generic timing, targeting, delivery and resource operations separate from Direvanity's authored class definitions. Animation, sound and effects should follow authoritative events so that native and WASM presentations cannot produce different combat outcomes.
 
 The experiment must make the following decisions concrete in a playable encounter:
 

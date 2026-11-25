@@ -1,133 +1,82 @@
-# Verified RPG checkpoint
+# Direvanity development checkpoint
 
-Dreadmarch · https://github.com/Herbertofury/Dreadmarch · 25 November 2026 (America/Denver)
+25 November 2026 (America/Denver) · [canonical repository](https://github.com/Herbertofury/Dreadmarch)
 
-## Current direction and scope
+## Product and production boundary
 
-A character-led, offline, single-player action RPG is the primary game. Original Divine Divinity
-(2002), the complete Diablo series, Lost Ark, Path of Exile and Path of Exile II are explicit inspirations.
-The earlier RTS encounter remains an optional regression scenario. See [RPG_DIRECTION.md](RPG_DIRECTION.md).
+The game is now **Direvanity**. This checkpoint expands the shared Rust RPG and both clients.
+It contains two playable chapter loops, six story regions, four side quests and a repeatable
+expedition region. It does not contain hundreds of authored hours or finished AAA production art.
 
-The delivered content is a playable procedural prologue and reusable engine foundation. A massive
-finished campaign, production character art, all researched mechanics implemented, and demonstrated
-AAAA quality remain production goals. [CLASS_SYNTHESIS.md](CLASS_SYNTHESIS.md) states the simplified
-prototype behaviors and the contracts needed to replace them with full class combat systems.
+[DIREVANITY_PRODUCTION.md](DIREVANITY_PRODUCTION.md) records the accepted 100+ hour campaign,
+100+ hour optional-story and 100+ hour endgame direction. The production catalogue defines 12 acts,
+36 regional groups, 48 faction arcs and eight endgame disciplines with unvalidated planning budgets.
+`validate_content_plan.py` checks those estimates and prevents them being certified as shipped hours.
 
-## Implemented
+## Implemented in this iteration
 
-- All 19 distinct researched Diablo class identities in both creators, with independent body choices.
-- 174 original prototype nodes across 58 branches: three branches per class, four for Spiritborn.
-- Persistent name, silhouette, six hair styles, skin/hair/eye/cloth colors and stature.
-- Shared Rust campaign rules: prerequisites, skill learning, cooldowns, focus, 11 effect families,
-  XP/levels, equipment, loot, dialogue, main/side quests and persistent region travel.
-- Hearthmere, Hollow Moor and Forgotten Sanctum form a complete main-quest and side-quest prologue.
-- Persistent defeated enemies and uncollected loot, one-time rewards and portable exact JSON saves.
-- Native Bevy creator, campaign UI, movement, casting, learning, interaction, inventory and save/load.
-- Browser character slots, save/resume, import/export, contained panels and hidden-tab pause.
+- Direvanity creator, HUD, package and native executable branding; original repository address retained.
+- All 19 class resource profiles with named reservoirs, capacities, recovery cadence and kill returns.
+- Animated life/class resource presentation, cooldown/affordability hotbars, XP and reduced motion.
+- Canonical Rust journal and world atlas shared by the native and browser clients.
+- Browser inventory search/sort/comparison, real minimap, overworld-first map and destination actions.
+- Native full scrollable inventory, journal/atlas, complete active-skill deck and preserved panel pause.
+- Ember Coast, Glasswood and Drowned Archive extend the original three persistent story regions.
+- A Crown for the Nameless chapter, permanent shelter/release oath and three additional side quests.
+- Shattered Concord expeditions: hunt/seal/purge objectives, wrath/haste/drought modifiers, seeded
+  terrain/encounters, rising depth, recoverable drops, one-time rewards and exact return/resume.
+- Additive migration of old version-2 saves; existing browser character keys preserved; native legacy
+  default-save fallback keeps the original file intact.
+- Hotbar node reuse and cached static minimap geometry; no item, class or content availability caps.
 
-## Source and automated verification
-
-The Rust/native source checkpoint is
-[`a96d473d834dac66b0c0f0977300ed6dca45899e`](https://github.com/Herbertofury/Dreadmarch/commit/a96d473d834dac66b0c0f0977300ed6dca45899e).
-[CI run 45657960569](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657960569) passed every job.
-Later documentation, checkpoint packaging and a browser objective-text correction do not change the Rust/native source.
+## Current observed checks
 
 | Gate | Observed result |
 | --- | --- |
-| Core, simulation, WASM and independent consumer tests | 27 passed |
-| Native regression tests | 4 passed on Linux and Windows |
-| Format and strict Clippy | Passed, including all native targets |
-| Complete campaign through every class | 19 real public-command playthroughs; 52,530 simulated ticks; both quests completed |
-| Packaged campaign controls | 16 checks passed with actual JS/WASM and structural DOM/Canvas mocks |
-| Legacy packaged controls | 20 checks passed; legacy WASM integration also passed |
-| Legacy full battle, replay/save, independent engine consumer | Passed in final-source CI |
+| Non-native workspace unit tests | 38 passed: core 6, simulation 27, WASM 4, independent consumer 1 |
+| Native unit tests | 7 passed, including final native orb shader correction |
+| Format and strict workspace Clippy | Passed on the integration checkpoint |
+| All-class real WASM playthroughs | 19 classes, both chapters, all four side quests, 57 expeditions, 255,450 simulated ticks |
+| Browser campaign controls against actual WASM | 23 cases passed; DOM/Canvas structural mocks, separate live visual review required |
+| Browser legacy controls | 20 cases passed; actual WASM integration also passed |
+| Legacy battle/replay/save and independent engine consumer | Passed |
+| Planning catalogue | Valid unique IDs, acyclic prerequisites, positive ranges and honest unmeasured-duration labels |
 
-Campaign checks exercise real movement/combat/interaction, prerequisites, reward uniqueness,
-equipment, persistent enemies/loot, exact cross-instance save restoration and invalid-save atomicity.
-The challenge pass fixed item/unit allocation exhaustion before reward/travel mutations, currency
-overflow, stored-region navigation validation, modal transitions, native movement throttling after
-clock rollback, defeated-save camera initialization and presentation scheduling after travel.
+The class-resource identity test binds all 19 profiles by class ID. Additional regression tests cover
+legacy migration, invalid extensions, gated-road atomicity, irreversible oaths, distinct crossing
+benefits, every point's reachability, scaled saved enemies, expedition resumption and reward uniqueness.
+An early hunt reward followed by more combat cannot discard later drops when the next run begins.
 
-## Actual runtime and visual evidence
+The final shared WASM at this checkpoint has SHA-256
+`dada0101efb8415504a5c12f04df80c87383c4331934160dfcd453016a26f2dd`.
+Actual command-playthrough fixtures preserve completed chapter, active expedition and completed
+expedition saves without editing HP, inventory, XP or quest state. Browser controls import each exactly.
 
-- Native campaign: 184 frames, 10 command checks, exact save roundtrip and validated HUD; checksum
-  `b31fcf2df3844452`. Creator, class choice, quest, cache/equipment, skill and travel were exercised.
-- Native legacy tactical mode: 120 frames, three command checks, exact save roundtrip and validated
-  HUD; checksum `4d08544a95f6c631`. The receipt records the success marker without inventing a lost
-  final process-exit response.
-- Native captures are 1440 × 900 and were visually reviewed. Current proof is in
-  `native-campaign-receipt.json`, `native-campaign-smoke.log`, `native-rts-regression.log` and their PNGs.
-- The native environment used Vulkan through Mesa Lavapipe. This proves functional rendering and
-  command/UI behavior; it does not establish performance on a gaming GPU or a real Windows window.
-- A complete live browser Witch Doctor playthrough reached level 6, defeated all ten region enemies,
-  completed both quests, earned both unique rewards and returned to Hearthmere. Movement, companion
-  casting, learning, loot/equipment, region persistence and quest turn-ins used actual controls. The
-  exported save and `rpg-live-playthrough.json` preserve this evidence. Earlier review also verified
-  customization, retraining, save restoration and independent Paladin/Witch Doctor slots.
-- [Pages run 45657139297](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657139297) deployed
-  source `1558e58`. Browser source is unchanged in `a96d473`; live review verified modal focus
-  wrapping, inert background, Escape focus restoration, prior pause preservation and creator/resume.
-  [Pages run 45660608035](https://github.com/Herbertofury/Dreadmarch/actions/runs/45660608035) then
-  deployed `f1e5271`, including the objective-text correction. Both saved character slots survived;
-  the level-6 Witch Doctor restored with both quests complete, 289 coins, ten kills and four items.
-  The corrected journal was visually reviewed; packaged campaign controls still pass.
-- Structural DOM/Canvas tests establish control behavior, not visual quality. Actual browser review
-  and native rendered captures are recorded separately.
+## Runtime and publication evidence
 
-## Research provenance and coverage
+The actual native campaign passed 184 frames, ten command checks, exact save restoration and HUD
+validation under Mesa Lavapipe. Visual review found rectangular reservoir fills; the corrected embedded
+GPU shader passed a fresh render with true circular liquid, glass highlights and no overflow.
+The final-shader legacy skirmish also passed 120 frames and three commands. All three native captures
+were reviewed at 1440 × 900. These UI-candidate results precede the subsequent extreme-save hardening;
+the final optimized package is verified separately. Software Vulkan establishes
+functional rendering, not dedicated-GPU frame rates or Windows interactive runtime proof.
 
-All three complete JSON catalogues and readable atlases are published. File SHA-256 values and Git
-blob identities are recorded in `research-validation.json`. Exact counts, edition boundaries and
-unknown denominators remain visible in each atlas. Divinity contains 1,684 typed edition-specific
-records. Research entries are not counted as implemented Dreadmarch abilities.
+Final optimized native rendering, public browser review, source commit, CI, platform package hashes and
+verified delivery identities are recorded at the final publication checkpoint. These gates remain active
+until their exact results are appended; a successful structural test is not visual acceptance.
 
-## Release and complete artifact
+## Next production milestone
 
-Release build run [45657992875](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657992875)
-builds optimized Windows/Linux packages from `a96d473`. The Linux job passed and its exact ZIP
-was downloaded through the GitHub artifact connector, integrity checked and safely extracted.
-All 25 packaged files were hashed; the three research catalogues match the worktree and both source
-revisions. The Linux binary retains executable mode `0755` and requires glibc 2.35 or later.
+Finish one production-quality region: original rigged characters and equipment, authored environment
+art, typed attack timelines and real projectile/chain delivery, expressive movement/reactions, sound,
+NPC dialogue choices, differentiated enemy ecology and a multi-phase boss. Extend the new class
+resource foundation into signature generators and behaviorally different builds. Prove controller,
+rebindable input and Windows/Linux hardware frame pacing before scaling authoring across the 12 acts.
 
-The extracted optimized Linux executable exited **0** after the independent campaign smoke: 185
-frames, tick 354, ten command checks, exact save roundtrip, HUD validation and captured images.
-Checksum `21debfd8d94ba33c` matches the optimized CI campaign result. Both 1440 × 900 captures were
-visually reviewed. `rpg-extracted-native-receipt.json` preserves package and binary hashes, every
-extracted file hash, CI smoke results and the independent run. Development, CI and extracted-package
-evidence remain separate. The Windows job also passed its tests and optimized build. Its x86-64 PE
-executable is 76,911,616 bytes, SHA-256 `ebcf6ca79a6f4c87b872c02d07ecd47da9e6411a12c614914f8cd7fe46683349`.
-Windows checkout had converted 22 tracked text files to CRLF; parsed JSON data was identical. Those
-files were restored to the exact `a96d473` Git blobs while retaining the tested binary unchanged.
-The package receipt records both original CI and distribution identities. Repository attributes now
-keep future text checkouts at LF. Both packages contain all three exact research catalogues.
+The exact preceding release and its independent evidence remain in [HISTORY_ALPHA2.md](HISTORY_ALPHA2.md).
 
-Distribution package SHA-256 values:
-
-- Linux: `ba76dcd5f8ad49af9bb1c81b5a705ede3eecd3699860a24365bd028a44969b43`
-- Windows: `60a76ac1aaef2ef6d6010b4a152445647f1346bed44e1ed0ed380524d0c4c7f5`
-
-The public [v0.1.0-alpha.2 release](https://github.com/Herbertofury/Dreadmarch/releases/tag/v0.1.0-alpha.2)
-was published on 25 November 2026 from tag commit `e4a6e9c971ead55ecc2569fb1d931f33a3522eb6`.
-All 17 initial release assets were read back through GitHub metadata and matched to their local
-byte counts and SHA-256 digests. The exact map is preserved in `public-release-assets.json`.
-
-The complete checkpoint format includes the clean Git source, both offline browser clients, both
-platform packages, all research catalogues and the separate development/CI/extracted runtime proof.
-`CHECKPOINT.json` identifies the source revision and every payload hash, size and permission. A
-separate verifier checks the archive against Git blobs and nested native-package receipts.
-
-Complete-file backup readback remains a mandatory delivery gate. Its observed result and exact
-archive SHA-256 are recorded in the release asset `Dreadmarch-delivery.json`, which is generated
-after the archive is transferred. This post-transfer receipt is intentionally outside the archive
-whose identity it verifies. The final delivery must not claim success without that receipt.
-
-## Production work remains
-
-Original rigged characters, faces, authored animation, world art, audio, boss design, differentiated
-class resources, real projectile/chain delivery, advanced itemization, branching dialogue, controller
-support, accessibility and the extensive campaign remain roadmap work. Native WASD/click movement
-is implemented; production controller and rebinding support is not yet complete.
-
-The earlier milestone's evidence is preserved in [HISTORY_ALPHA1.md](HISTORY_ALPHA1.md). Alpha.1 native
-binaries do not contain this RPG implementation. Dependency notices retain the two disclosed upstream
-text exceptions in [THIRD_PARTY.md](../THIRD_PARTY.md); the notice bundle does not claim those resolved.
+The final challenge also fixed numeric-boundary XP/skill-point saves, nonfinite content-plan targets,
+and repetitive expedition modifiers. Dedicated command tests completed hunt/wrath, seals/haste and
+purge/drought from an actual earned character save. Existing active expedition saves retain their
+stored seed and modifier. The final full class sweep is rerun by CI on the release source.

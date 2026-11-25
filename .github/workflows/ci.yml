@@ -20,6 +20,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2.9.3
       - name: Install pinned toolchain
         run: rustup show
+      - name: Validate authored production plan and honest duration boundaries
+        run: |
+          python3 scripts/validate_content_plan.py
+          python3 tests/content_plan_validation.py
       - name: Format
         run: cargo fmt --all -- --check
       - name: Simulation, ABI and independent engine tests
@@ -35,17 +39,20 @@ jobs:
       - name: Real WebAssembly integration
         run: node tests/web_abi.mjs
       - name: Packaged control regressions with real Rust state
-        run: node tests/web_controls.mjs dist/Dreadmarch-playtest.html
+        run: node tests/web_controls.mjs dist/Direvanity-playtest.html
       - name: Complete campaign through all 19 classes
-        run: node tests/rpg_abi.mjs
+        run: |
+          node tests/rpg_abi.mjs
+          node tests/rpg_modifiers.mjs
+          node tests/rpg_numeric_boundary.mjs
       - name: Character creator and campaign controls
-        run: node tests/rpg_controls.mjs dist/Dreadmarch-campaign.html
+        run: node tests/rpg_controls.mjs dist/Direvanity-campaign.html
       - uses: actions/upload-artifact@v7.0.2
         with:
-          name: Dreadmarch-browser-playtest
+          name: Direvanity-browser-playtest
           path: |
-            dist/Dreadmarch-campaign.html
-            dist/Dreadmarch-playtest.html
+            dist/Direvanity-campaign.html
+            dist/Direvanity-playtest.html
             dist/web-build.json
             dist/rpg-abi-proof.json
             dist/rpg-controls-proof.json

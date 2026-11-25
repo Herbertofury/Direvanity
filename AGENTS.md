@@ -1,4 +1,4 @@
-# Dreadmarch development contract
+# Direvanity development contract
 
 Read README.md and docs/VISION.md, then the code for the affected subsystem.
 The canonical source repository is https://github.com/Herbertofury/Dreadmarch.

@@ -4,7 +4,7 @@
 
 | Package | Owns | Must not own |
 | --- | --- | --- |
-| dread-core | Integer world coordinates, generic grid navigation and spatial indexing | Dreadmarch classes, graphics, browser state |
+| dread-core | Integer world coordinates, generic grid navigation and spatial indexing | Direvanity classes, graphics, browser state |
 | dread-sim | Campaign/character/quest/item rules, unit state, combat, optional skirmish objectives, commands, saves | Camera, UI, frame rate, nondeterministic wall-clock decisions |
 | dreadmarch-client | Bevy 3D presentation, character creator, campaign UI, input mapping, targeting, camera and HUD | An independent combat/navigation implementation |
 | dread-wasm | Thin C ABI and JSON boundary over the same Rust simulation | JavaScript gameplay rules |

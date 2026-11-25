@@ -11,5 +11,5 @@ dread-sim = { path = "../../crates/dread-sim" }
 bevy = { workspace = true, features = ["default_app", "std", "multi_threaded", "bevy_winit", "x11", "3d_bevy_render", "ui_bevy_render", "default_font", "ui_picking", "bevy_ui_widgets"] }
 
 [[bin]]
-name = "dreadmarch"
+name = "direvanity"
 path = "src/main.rs"

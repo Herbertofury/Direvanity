@@ -1,16 +1,18 @@
-//! Dreadmarch's native presentation. The authoritative game state lives in dread-sim.
+//! Direvanity's native presentation. The authoritative game state lives in dread-sim.
 //! All geometry and visual effects below are original procedural game assets.
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
+    asset::uuid_handle,
     camera::{CameraUpdateSystems, RenderTarget, ScalingMode, ShadowLodOrigin},
     input::{ButtonState, keyboard::KeyboardInput, mouse::MouseWheel},
     picking::hover::Hovered,
     post_process::bloom::Bloom,
     prelude::*,
     render::{
-        render_resource::{TextureFormat, TextureUsages},
+        render_resource::{AsBindGroup, TextureFormat, TextureUsages},
         view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk},
     },
+    shader::ShaderRef,
     transform::TransformSystems,
     ui::{IsDefaultUiCamera, Pressed, UiSystems},
     ui_widgets::{Activate, Button as UiButton},
@@ -30,6 +32,22 @@ const SEED: u64 = 0xD4EA_DA4C;
 const GOLD: Color = Color::srgb(0.90, 0.69, 0.34);
 const TEAL: Color = Color::srgb(0.28, 0.93, 0.81);
 const UI_BG: Color = Color::srgba(0.025, 0.038, 0.046, 0.96);
+const PARCHMENT: Color = Color::srgb(0.87, 0.83, 0.73);
+const INK: Color = Color::srgb(0.035, 0.030, 0.025);
+const ORB_SHADER: Handle<Shader> = uuid_handle!("2a199ebc-e0e9-4a9d-95cc-316be42fef71");
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct OrbMaterial {
+    #[uniform(0)]
+    tint: Vec4,
+    #[uniform(1)]
+    state: Vec4,
+}
+impl UiMaterial for OrbMaterial {
+    fn fragment_shader() -> ShaderRef {
+        ORB_SHADER.into()
+    }
+}
 
 #[derive(Resource)]
 struct Battle {
@@ -55,6 +73,7 @@ struct Battle {
     item_index: usize,
     scene_generation: u64,
     ui_keyboard_consumed: bool,
+    reduced_motion: bool,
 }
 struct Impact {
     position: Vec3,
@@ -93,6 +112,7 @@ impl Default for Battle {
             item_index: 0,
             scene_generation: 1,
             ui_keyboard_consumed: false,
+            reduced_motion: false,
         }
     }
 }
@@ -182,7 +202,7 @@ impl Battle {
     fn nearest_interaction(&self) -> Option<(String, String, u64)> {
         let c = self.world.campaign.as_ref()?;
         let hero = self.world.commander()?;
-        rpg::points_of_interest(&c.region)
+        rpg::campaign_points_of_interest(c)
             .into_iter()
             .map(|p| (p.id, p.name, hero.position.distance_squared(p.position)))
             .chain(c.ground_loot.iter().map(|l| {
@@ -214,13 +234,37 @@ impl Battle {
     fn command(&mut self, command: SimCommand) {
         self.command_count += 1;
         let previous_region = self.world.campaign.as_ref().map(|c| c.region.clone());
+        let refresh_pois = matches!(
+            &command,
+            SimCommand::Interact { .. } | SimCommand::Travel { .. }
+        );
+        let previous_pois = if refresh_pois {
+            self.world.campaign.as_ref().map(|c| {
+                rpg::campaign_points_of_interest(c)
+                    .into_iter()
+                    .map(|poi| poi.id)
+                    .collect::<Vec<_>>()
+            })
+        } else {
+            None
+        };
         let cast = match &command {
             SimCommand::Cast { target } | SimCommand::CastSkill { target, .. } => Some(*target),
             _ => None,
         };
         match self.world.apply(command) {
             Ok(()) => {
-                if previous_region != self.world.campaign.as_ref().map(|c| c.region.clone()) {
+                let changed_pois = refresh_pois
+                    && previous_pois
+                        != self.world.campaign.as_ref().map(|c| {
+                            rpg::campaign_points_of_interest(c)
+                                .into_iter()
+                                .map(|poi| poi.id)
+                                .collect::<Vec<_>>()
+                        });
+                if changed_pois
+                    || previous_region != self.world.campaign.as_ref().map(|c| c.region.clone())
+                {
                     self.scene_generation = self.scene_generation.wrapping_add(1);
                 }
                 if let Some(target) = cast {
@@ -294,6 +338,7 @@ struct Cli {
     campaign_smoke: bool,
     campaign_stage: u8,
     save_path: String,
+    legacy_save_path: Option<String>,
     screenshot: Option<String>,
     frames: u32,
     captured: bool,
@@ -376,23 +421,76 @@ struct SkirmishControls;
 struct CreatorPanel;
 #[derive(Component)]
 struct CreatorSummary;
+#[derive(Component)]
+struct LorePanel;
+#[derive(Component)]
+struct SkillDeck;
+#[derive(Component)]
+struct SkillLabel(usize);
+#[derive(Component)]
+struct SkillRecovery(usize);
+#[derive(Component)]
+struct ResourceName;
+#[derive(Component)]
+struct VitalText;
+#[derive(Component)]
+struct ResourceText;
+#[derive(Component)]
+struct ExperienceText;
+#[derive(Component)]
+struct ControlHint;
+#[derive(Component)]
+struct MotionLabel;
+#[derive(Component, Clone, Copy)]
+enum GaugeKind {
+    Life,
+    Resource,
+    Experience,
+}
+#[derive(Component)]
+struct GaugeFill {
+    kind: GaugeKind,
+    displayed: f32,
+    initialized: bool,
+}
+type HudTextData<'a> = (
+    &'a mut Text,
+    Has<VitalText>,
+    Has<ResourceText>,
+    Has<ResourceName>,
+    Has<ExperienceText>,
+    Has<MotionLabel>,
+    Has<ControlHint>,
+);
+type HudTextFilter = Or<(
+    With<VitalText>,
+    With<ResourceText>,
+    With<ResourceName>,
+    With<ExperienceText>,
+    With<MotionLabel>,
+    With<ControlHint>,
+)>;
 type CampaignPanelFilter = Or<(
     With<CreatorPanel>,
     With<CampaignControls>,
     With<SkirmishControls>,
+    With<LorePanel>,
 )>;
 type CampaignPanelData<'a> = (
     &'a mut Node,
     Has<CreatorPanel>,
     Has<CampaignControls>,
     Has<SkirmishControls>,
+    Has<LorePanel>,
 );
-#[derive(Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 enum CampaignPanel {
     #[default]
     Closed,
     Skills,
     Inventory,
+    Journal,
+    World,
 }
 #[derive(Component, Clone, Copy, PartialEq, Eq)]
 enum Action {
@@ -406,6 +504,10 @@ enum Action {
     Help,
     Skills,
     Inventory,
+    Journal,
+    World,
+    SelectSkill(usize),
+    Motion,
     Previous,
     Next,
     Learn,
@@ -465,7 +567,7 @@ fn main() {
             }
             "--help" | "-h" => {
                 println!(
-                    "Dreadmarch native campaign foundation\n  Default: character creator and single-player campaign\n  --class ID --name NAME  seed the editable creator\n  --load PATH            load a validated exported campaign or skirmish save\n  --save PATH            choose the F5/F9 save file\n  --campaign-smoke       exercise native creator, campaign, skills and saves\n  --skirmish             original tactical mode\n  --smoke-test           original tactical rendering regression\n  --screenshot PATH      capture PNG after scene warmup\nCampaign: right-click/WASD move; Space selected skill; 1-6 learned skills; J interact/loot/travel; K skills; I inventory; [/] select; L learn; U equip; T retrain in town; F2 creator; Q/E orbit; wheel zoom; P pause; F5/F9 save/load; F1 help."
+                    "Direvanity native campaign\n  Default: character creator and single-player campaign\n  --class ID --name NAME  seed the editable creator\n  --load PATH            load a validated exported campaign or skirmish save\n  --save PATH            choose the F5/F9 save file\n  --campaign-smoke       exercise native creator, campaign, skills and saves\n  --skirmish             original tactical mode\n  --smoke-test           original tactical rendering regression\n  --screenshot PATH      capture PNG after scene warmup\nCampaign: right-click/WASD move; Space selected skill; 1-6 learned skills; J interact/loot/travel; K skills; I inventory; [/] select; L learn; U equip; T retrain in town; F2 creator; Q/E orbit; wheel zoom; P pause; F5/F9 save/load; F1 help."
                 );
                 return;
             }
@@ -506,10 +608,18 @@ fn main() {
         battle.paused = true;
     }
     if cli.save_path.is_empty() {
+        cli.legacy_save_path = Some(
+            if battle.world.campaign.is_some() {
+                "dreadmarch-campaign.json"
+            } else {
+                "dreadmarch-save.json"
+            }
+            .into(),
+        );
         cli.save_path = if battle.world.campaign.is_some() {
-            "dreadmarch-campaign.json"
+            "direvanity-campaign.json"
         } else {
-            "dreadmarch-save.json"
+            "direvanity-skirmish.json"
         }
         .into();
     }
@@ -534,7 +644,7 @@ fn main() {
         });
     let plugins = DefaultPlugins.set(WindowPlugin {
         primary_window: (!smoke).then(|| Window {
-            title: "DREADMARCH | The Ashen Concord - single-player foundation".into(),
+            title: "DIREVANITY | The Ashen Concord".into(),
             resolution: (1440, 900).into(),
             present_mode: bevy::window::PresentMode::AutoNoVsync,
             ..default()
@@ -554,7 +664,8 @@ fn main() {
     } else {
         app.add_plugins(plugins);
     }
-    app.add_systems(Startup, (setup_scene, setup_ui).chain())
+    app.add_plugins(UiMaterialPlugin::<OrbMaterial>::default())
+        .add_systems(Startup, (setup_scene, setup_ui).chain())
         .add_systems(FixedUpdate, step_simulation)
         .add_observer(activate_button)
         .add_systems(
@@ -569,6 +680,10 @@ fn main() {
                 update_units,
                 update_hud,
                 update_campaign_ui,
+                sync_skill_deck,
+                update_reservoirs,
+                update_skill_deck,
+                scroll_lore.run_if(interactive),
                 draw_tactical,
             )
                 .chain(),
@@ -915,7 +1030,7 @@ fn sync_region_geometry(
         commands.entity(ring).insert(RegionGeometry);
     }
     if let Some(c) = &battle.world.campaign {
-        for poi in rpg::points_of_interest(&c.region) {
+        for poi in rpg::campaign_points_of_interest(c) {
             let pos = point3(poi.position, 0.15);
             let (mesh, scale) = match poi.kind.as_str() {
                 "person" => (assets.cone.clone(), Vec3::new(0.8, 1.6, 0.8)),
@@ -979,7 +1094,7 @@ fn update_poi_labels(
             node.display = if p.x < 0.0
                 || p.x > size.x
                 || p.y < 95.0
-                || p.y > size.y - 220.0
+                || p.y > size.y - 310.0
                 || ((battle.help || battle.panel != CampaignPanel::Closed)
                     && p.x < 600.0
                     && p.y < 690.0)
@@ -993,7 +1108,17 @@ fn update_poi_labels(
         }
     }
 }
-fn setup_ui(mut commands: Commands) {
+fn setup_ui(
+    mut commands: Commands,
+    mut shaders: ResMut<Assets<Shader>>,
+    mut orb_materials: ResMut<Assets<OrbMaterial>>,
+) {
+    shaders
+        .insert(
+            ORB_SHADER.id(),
+            Shader::from_wgsl(include_str!("orb.wgsl"), "direvanity/orb.wgsl"),
+        )
+        .expect("embedded orb shader identifier is valid");
     commands
         .spawn((
             Node {
@@ -1002,58 +1127,315 @@ fn setup_ui(mut commands: Commands) {
                 left: px(0),
                 right: px(0),
                 height: px(86),
-                padding: UiRect::axes(px(24), px(15)),
+                padding: UiRect::axes(px(24), px(14)),
+                border: UiRect::bottom(px(1)),
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
+                column_gap: px(20),
                 ..default()
             },
             BackgroundColor(UI_BG),
+            BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
         ))
         .with_children(|parent| {
             parent
                 .spawn(Node {
                     flex_direction: FlexDirection::Column,
-                    row_gap: px(3),
+                    row_gap: px(4),
                     ..default()
                 })
                 .with_children(|p| {
-                    p.spawn(label("D R E A D M A R C H", 26.0, GOLD));
+                    p.spawn(label("D I R E V A N I T Y", 28.0, GOLD));
                     p.spawn(label(
-                        "THE ASHEN CONCORD    /    PLAYABLE FOUNDATION",
-                        11.0,
-                        Color::srgb(0.55, 0.68, 0.69),
+                        "THE ASHEN CONCORD  /  A WORLD THAT REMEMBERS",
+                        10.0,
+                        PARCHMENT,
                     ));
                 });
-            parent.spawn((Hud, label("", 16.0, Color::srgb(0.82, 0.88, 0.85))));
+            parent.spawn((Hud, label("", 14.0, PARCHMENT)));
         });
-    commands.spawn((Node { position_type:PositionType::Absolute, bottom:px(0), left:px(0), right:px(0), min_height:px(138), padding:UiRect::all(px(18)), flex_direction:FlexDirection::Column, row_gap:px(12), ..default() }, BackgroundColor(UI_BG))).with_children(|parent| {
-        parent.spawn((StatusLine, label("", 15.0, TEAL)));
-        parent.spawn((SkirmishControls, Node { column_gap:px(8), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() })).with_children(|p| {
-            for (text, action) in [(format!("1  VANGUARD  {}", UnitKind::Vanguard.stats().recruitment_cost.unwrap_or(0)),Action::Vanguard),(format!("2  RANGER  {}", UnitKind::Ranger.stats().recruitment_cost.unwrap_or(0)),Action::Ranger),("SPACE  SOULFIRE".into(),Action::Spell),("TAB  ARMY".into(),Action::Army),("H  HOLD".into(),Action::Hold),("P  PAUSE".into(),Action::Pause),("R  RESTART".into(),Action::Restart),("F1  HELP".into(),Action::Help)] {
-                p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(14),px(11)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(&text,13.0,GOLD));
-            }
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: px(0),
+                left: px(0),
+                right: px(0),
+                min_height: px(145),
+                padding: UiRect::axes(px(22), px(12)),
+                border: UiRect::top(px(2)),
+                flex_direction: FlexDirection::Column,
+                row_gap: px(8),
+                ..default()
+            },
+            BackgroundColor(UI_BG),
+            BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
+        ))
+        .with_children(|parent| {
+            parent.spawn((StatusLine, label("", 13.0, PARCHMENT)));
+            parent
+                .spawn((
+                    CampaignControls,
+                    Node {
+                        column_gap: px(18),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::SpaceBetween,
+                        ..default()
+                    },
+                ))
+                .with_children(|deck| {
+                    for (i, kind, title, color) in [
+                        (
+                            0,
+                            GaugeKind::Life,
+                            "VITALITY",
+                            Color::srgb(0.65, 0.06, 0.10),
+                        ),
+                        (1, GaugeKind::Resource, "CLASS RESOURCE", TEAL),
+                    ] {
+                        if i == 1 {
+                            deck.spawn(Node {
+                                flex_grow: 1.0,
+                                min_width: px(0),
+                                flex_direction: FlexDirection::Column,
+                                row_gap: px(9),
+                                ..default()
+                            })
+                            .with_children(|center| {
+                                center.spawn((
+                                    SkillDeck,
+                                    Node {
+                                        flex_wrap: FlexWrap::Wrap,
+                                        column_gap: px(6),
+                                        row_gap: px(6),
+                                        justify_content: JustifyContent::Center,
+                                        ..default()
+                                    },
+                                ));
+                                center
+                                    .spawn((
+                                        Node {
+                                            height: px(5),
+                                            width: percent(100),
+                                            overflow: Overflow::clip(),
+                                            border_radius: BorderRadius::all(px(3)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(INK),
+                                    ))
+                                    .with_child((
+                                        GaugeFill {
+                                            kind: GaugeKind::Experience,
+                                            displayed: 0.0,
+                                            initialized: false,
+                                        },
+                                        Node {
+                                            height: percent(100),
+                                            width: percent(0),
+                                            ..default()
+                                        },
+                                        BackgroundColor(GOLD),
+                                    ));
+                                center.spawn((ExperienceText, label("", 11.0, GOLD)));
+                            });
+                        }
+                        deck.spawn(Node {
+                            width: px(115),
+                            flex_shrink: 0.0,
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::Center,
+                            row_gap: px(5),
+                            ..default()
+                        })
+                        .with_children(|vital| {
+                            vital
+                                .spawn((Node {
+                                    width: px(100),
+                                    height: px(100),
+                                    align_items: AlignItems::Center,
+                                    justify_content: JustifyContent::Center,
+                                    ..default()
+                                },))
+                                .with_children(|orb| {
+                                    orb.spawn((
+                                        GaugeFill {
+                                            kind,
+                                            displayed: 0.0,
+                                            initialized: false,
+                                        },
+                                        Node {
+                                            position_type: PositionType::Absolute,
+                                            top: px(0),
+                                            bottom: px(0),
+                                            left: px(0),
+                                            right: px(0),
+                                            ..default()
+                                        },
+                                        BackgroundColor(Color::NONE),
+                                        MaterialNode(orb_materials.add(OrbMaterial {
+                                            tint: color.to_linear().to_vec4(),
+                                            state: Vec4::new(1.0, 0.0, 1.0, 0.0),
+                                        })),
+                                    ));
+                                    if i == 0 {
+                                        orb.spawn((
+                                            VitalText,
+                                            label("", 14.0, Color::WHITE),
+                                            ZIndex(2),
+                                        ));
+                                    } else {
+                                        orb.spawn((
+                                            ResourceText,
+                                            label("", 14.0, Color::WHITE),
+                                            ZIndex(2),
+                                        ));
+                                    }
+                                });
+                            if i == 1 {
+                                vital.spawn((ResourceName, label(title, 11.0, GOLD)));
+                            } else {
+                                vital.spawn(label(title, 11.0, GOLD));
+                            }
+                        });
+                    }
+                });
+            parent
+                .spawn((
+                    SkirmishControls,
+                    Node {
+                        column_gap: px(8),
+                        flex_wrap: FlexWrap::Wrap,
+                        row_gap: px(6),
+                        ..default()
+                    },
+                ))
+                .with_children(|p| {
+                    for (text, action) in [
+                        (
+                            format!(
+                                "1  VANGUARD  {}",
+                                UnitKind::Vanguard.stats().recruitment_cost.unwrap_or(0)
+                            ),
+                            Action::Vanguard,
+                        ),
+                        (
+                            format!(
+                                "2  RANGER  {}",
+                                UnitKind::Ranger.stats().recruitment_cost.unwrap_or(0)
+                            ),
+                            Action::Ranger,
+                        ),
+                        ("SPACE  SOULFIRE".into(), Action::Spell),
+                        ("TAB  ARMY".into(), Action::Army),
+                        ("H  HOLD".into(), Action::Hold),
+                        ("P  PAUSE".into(), Action::Pause),
+                        ("R  RESTART".into(), Action::Restart),
+                        ("F1  HELP".into(), Action::Help),
+                    ] {
+                        p.spawn((
+                            UiButton,
+                            Hovered::default(),
+                            action,
+                            Node {
+                                padding: UiRect::axes(px(14), px(11)),
+                                border: UiRect::all(px(1)),
+                                ..default()
+                            },
+                            BackgroundColor(INK),
+                            BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
+                        ))
+                        .with_child(label(&text, 13.0, GOLD));
+                    }
+                });
+            parent
+                .spawn((
+                    CampaignControls,
+                    Node {
+                        column_gap: px(5),
+                        flex_wrap: FlexWrap::Wrap,
+                        row_gap: px(5),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                ))
+                .with_children(|p| {
+                    for (text, action) in [
+                        ("SPACE  CAST", Action::Spell),
+                        ("J  INTERACT", Action::Interact),
+                        ("K  SKILLS", Action::Skills),
+                        ("I  INVENTORY", Action::Inventory),
+                        ("N  JOURNAL", Action::Journal),
+                        ("M  WORLD", Action::World),
+                        ("[  PREV", Action::Previous),
+                        ("]  NEXT", Action::Next),
+                        ("L  LEARN", Action::Learn),
+                        ("U  EQUIP", Action::Equip),
+                        ("T  RETRAIN", Action::Respec),
+                        ("P  PAUSE", Action::Pause),
+                        ("F2  CREATOR", Action::Creator),
+                        ("F1  HELP", Action::Help),
+                    ] {
+                        p.spawn((
+                            UiButton,
+                            Hovered::default(),
+                            action,
+                            Node {
+                                padding: UiRect::axes(px(8), px(7)),
+                                border: UiRect::all(px(1)),
+                                ..default()
+                            },
+                            BackgroundColor(INK),
+                            BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
+                        ))
+                        .with_child(label(text, 11.0, GOLD));
+                    }
+                    p.spawn((
+                        UiButton,
+                        Hovered::default(),
+                        Action::Motion,
+                        Node {
+                            padding: UiRect::axes(px(8), px(7)),
+                            border: UiRect::all(px(1)),
+                            ..default()
+                        },
+                        BackgroundColor(INK),
+                        BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
+                    ))
+                    .with_child((MotionLabel, label("F4  MOTION ON", 11.0, GOLD)));
+                });
+            parent.spawn((ControlHint, label("", 10.0, Color::srgb(0.62, 0.61, 0.55))));
         });
-        parent.spawn((CampaignControls, Node { column_gap:px(6), flex_wrap:FlexWrap::Wrap, row_gap:px(6), ..default() })).with_children(|p| {
-            for (text, action) in [("SPACE  CAST", Action::Spell), ("J  INTERACT", Action::Interact), ("K  SKILLS", Action::Skills), ("[  PREV", Action::Previous), ("]  NEXT", Action::Next), ("L  LEARN", Action::Learn), ("I  INVENTORY", Action::Inventory), ("U  EQUIP", Action::Equip), ("T  RETRAIN", Action::Respec), ("P  PAUSE", Action::Pause), ("F2  CREATOR", Action::Creator), ("F1  HELP", Action::Help)] {
-                p.spawn((UiButton, Hovered::default(), action, Node { padding:UiRect::axes(px(10),px(9)), border:UiRect::all(px(1)), ..default() }, BackgroundColor(Color::srgb(0.075, 0.105, 0.12)), BorderColor::all(Color::srgb(0.24, 0.31, 0.31)))).with_child(label(text,12.0,GOLD));
-            }
-        });
-        parent.spawn(label("RIGHT move   |   SHIFT + RIGHT attack-move   |   Q/E orbit   WHEEL zoom   |   C center hero   |   F5 save   F9 load   F12 screenshot", 11.0, Color::srgb(0.54, 0.64, 0.65)));
-    });
-    commands.spawn((
-        HelpText,
-        label("", 17.0, Color::srgb(0.87, 0.9, 0.86)),
-        Node {
-            position_type: PositionType::Absolute,
-            top: px(110),
-            left: px(24),
-            padding: UiRect::all(px(20)),
-            max_width: px(540),
-            ..default()
-        },
-        BackgroundColor(Color::srgba(0.025, 0.04, 0.05, 0.95)),
-        Visibility::Hidden,
-    ));
+    commands
+        .spawn((
+            LorePanel,
+            Node {
+                position_type: PositionType::Absolute,
+                top: px(108),
+                left: px(24),
+                width: px(555),
+                height: px(440),
+                max_width: percent(93),
+                max_height: percent(48),
+                padding: UiRect::all(px(20)),
+                border: UiRect::all(px(1)),
+                overflow: Overflow::scroll_y(),
+                ..default()
+            },
+            ScrollPosition::default(),
+            GlobalZIndex(10),
+            BackgroundColor(Color::srgba(0.035, 0.030, 0.025, 0.98)),
+            BorderColor::all(GOLD),
+        ))
+        .with_child((
+            HelpText,
+            label("", 15.0, PARCHMENT),
+            Node {
+                flex_shrink: 0.0,
+                width: percent(100),
+                ..default()
+            },
+            Visibility::Hidden,
+        ));
     commands.spawn((
         DragRect,
         Node {
@@ -1105,10 +1487,13 @@ fn update_campaign_ui(
     mut panels: Query<CampaignPanelData<'_>, CampaignPanelFilter>,
     mut summary: Single<&mut Text, With<CreatorSummary>>,
 ) {
-    for (mut node, creator, campaign, skirmish) in &mut panels {
+    for (mut node, creator, campaign, skirmish, lore) in &mut panels {
         let visible = (creator && battle.creator.is_some())
             || (campaign && battle.world.campaign.is_some() && battle.creator.is_none())
-            || (skirmish && battle.world.campaign.is_none() && battle.creator.is_none());
+            || (skirmish && battle.world.campaign.is_none() && battle.creator.is_none())
+            || (lore
+                && battle.creator.is_none()
+                && (battle.help || battle.panel != CampaignPanel::Closed));
         node.display = if visible {
             Display::Flex
         } else {
@@ -1140,6 +1525,320 @@ fn update_campaign_ui(
             summary.0.push_str(&format!("\n{error}"));
         }
     }
+}
+
+// Changing text only when its value changes avoids re-shaping all HUD labels every frame.
+fn set_ui_text(text: &mut Text, value: String) {
+    if text.0 != value {
+        text.0 = value;
+    }
+}
+
+fn sync_skill_deck(
+    mut commands: Commands,
+    battle: Res<Battle>,
+    deck: Single<(Entity, Option<&Children>), With<SkillDeck>>,
+    mut previous_class: Local<String>,
+) {
+    let Some(c) = &battle.world.campaign else {
+        return;
+    };
+    if *previous_class == c.character.class_id {
+        return;
+    }
+    previous_class.clone_from(&c.character.class_id);
+    let (entity, children) = *deck;
+    if let Some(children) = children {
+        for child in children {
+            commands.entity(*child).despawn();
+        }
+    }
+    commands.entity(entity).with_children(|deck| {
+        // Every active discipline remains present. Learned skills receive their live hotkeys.
+        for (index, skill) in c
+            .class()
+            .skills
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.kind == "active")
+        {
+            deck.spawn((
+                UiButton,
+                Hovered::default(),
+                Action::SelectSkill(index),
+                Node {
+                    width: px(112),
+                    min_height: px(66),
+                    flex_shrink: 0.0,
+                    padding: UiRect::all(px(7)),
+                    border: UiRect::all(px(1)),
+                    border_radius: BorderRadius::all(px(4)),
+                    overflow: Overflow::clip(),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                BackgroundColor(INK),
+                BorderColor::all(Color::srgb(0.34, 0.25, 0.12)),
+            ))
+            .with_children(|slot| {
+                slot.spawn((
+                    SkillRecovery(index),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: px(0),
+                        bottom: px(0),
+                        width: percent(100),
+                        height: percent(0),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgba(0.01, 0.01, 0.02, 0.67)),
+                ));
+                slot.spawn((
+                    SkillLabel(index),
+                    label(&skill.name, 11.0, PARCHMENT),
+                    ZIndex(1),
+                ));
+            });
+        }
+    });
+}
+
+fn update_reservoirs(
+    battle: Res<Battle>,
+    time: Res<Time>,
+    mut fills: Query<(
+        &mut GaugeFill,
+        &mut Node,
+        Option<&MaterialNode<OrbMaterial>>,
+    )>,
+    mut materials: ResMut<Assets<OrbMaterial>>,
+    mut labels: Query<HudTextData<'_>, HudTextFilter>,
+) {
+    let campaign = battle.world.campaign.as_ref();
+    let hero = battle.world.commander();
+    let hp = hero.map_or(0, |u| u.hp.max(0));
+    let max_hp = hero.map_or(1, |u| u.max_hp.max(1));
+    let resource = campaign.map(|c| &c.class().resource);
+    let amount = campaign.map_or(0, |c| c.focus);
+    let maximum = resource.map_or(100, |r| r.maximum).max(1);
+    let resource_color = resource.map_or(TEAL, |r| character_color(&r.color));
+    let target_life = hp as f32 / max_hp as f32;
+    let target_resource = amount as f32 / maximum as f32;
+    let target_xp = campaign.map_or(0.0, |c| {
+        c.experience as f32 / c.next_level_experience().max(1) as f32
+    });
+    for (mut fill, mut node, material_node) in &mut fills {
+        let target = match fill.kind {
+            GaugeKind::Life => target_life,
+            GaugeKind::Resource => target_resource,
+            GaugeKind::Experience => target_xp,
+        }
+        .clamp(0.0, 1.0);
+        if !fill.initialized || battle.reduced_motion {
+            fill.displayed = target;
+            fill.initialized = true;
+        } else {
+            fill.displayed += (target - fill.displayed) * (1.0 - (-time.delta_secs() * 12.0).exp());
+            if (fill.displayed - target).abs() < 0.0005 {
+                fill.displayed = target;
+            }
+        }
+        if matches!(fill.kind, GaugeKind::Experience) {
+            let extent = percent(fill.displayed * 100.0);
+            if node.width != extent {
+                node.width = extent;
+            }
+        } else if let Some(handle) = material_node
+            && let Some(mut material) = materials.get_mut(&handle.0)
+        {
+            let color = if matches!(fill.kind, GaugeKind::Life) {
+                Color::srgb(0.70, 0.055, 0.085)
+            } else {
+                resource_color
+            };
+            let style = if matches!(fill.kind, GaugeKind::Life) {
+                1.3
+            } else {
+                match resource.map(|r| r.style.as_str()).unwrap_or("wave") {
+                    "flame" | "ember" | "spark" => 3.6,
+                    "arcane" | "void" => 2.2,
+                    "mist" | "soul" => 0.7,
+                    "leaf" => 1.0,
+                    "sun" | "crest" => 1.5,
+                    _ => 1.8,
+                }
+            };
+            material.tint = color.to_linear().to_vec4();
+            material.state = Vec4::new(
+                fill.displayed,
+                if battle.reduced_motion {
+                    0.0
+                } else {
+                    time.elapsed_secs()
+                },
+                style,
+                if battle.reduced_motion { 1.0 } else { 0.0 },
+            );
+        }
+    }
+    for (mut text, life, resource_value, resource_name, experience, motion, hint) in &mut labels {
+        let value = if life {
+            if hero.is_some() {
+                format!("{hp} / {max_hp}")
+            } else {
+                "FALLEN".into()
+            }
+        } else if resource_value {
+            format!("{amount} / {maximum}")
+        } else if resource_name {
+            resource.map_or("RESOURCE".into(), |r| r.name.to_uppercase())
+        } else if experience {
+            campaign.map_or(String::new(), |c| {
+                format!(
+                    "LEVEL {}   |   {} / {} EXPERIENCE   |   {} SKILL POINTS   |   {} GOLD",
+                    c.level,
+                    c.experience,
+                    c.next_level_experience(),
+                    c.skill_points,
+                    battle.world.economy.essence
+                )
+            })
+        } else if motion {
+            format!(
+                "F4  MOTION {}",
+                if battle.reduced_motion {
+                    "REDUCED"
+                } else {
+                    "ON"
+                }
+            )
+        } else if hint {
+            if campaign.is_some() {
+                "CLICK / WASD move  |  1-9 learned skills  |  F5 save  F9 resume  |  Wheel zoom; scroll open panels  |  Q/E orbit  |  F12 capture".into()
+            } else {
+                "RIGHT move  |  SHIFT + RIGHT attack-move  |  Q/E orbit  WHEEL zoom  |  C center  |  F5 save  F9 load  F12 capture".into()
+            }
+        } else {
+            String::new()
+        };
+        set_ui_text(&mut text, value);
+    }
+}
+
+fn update_skill_deck(
+    battle: Res<Battle>,
+    mut labels: Query<(&SkillLabel, &mut Text, &mut TextColor)>,
+    mut recovery: Query<(&SkillRecovery, &mut Node)>,
+    mut frames: Query<(&Action, &mut BorderColor), With<UiButton>>,
+) {
+    let Some(c) = &battle.world.campaign else {
+        return;
+    };
+    for (label, mut text, mut color) in &mut labels {
+        let Some(skill) = c.class().skills.get(label.0) else {
+            continue;
+        };
+        let learned = c.learned.contains(&skill.id);
+        let cooldown = c.cooldowns.get(&skill.id).copied().unwrap_or(0);
+        let hotkey = c
+            .class()
+            .skills
+            .iter()
+            .filter(|s| s.kind == "active" && c.learned.contains(&s.id))
+            .position(|s| s.id == skill.id)
+            .map(|i| (i + 1).to_string())
+            .unwrap_or_else(|| "-".into());
+        let state = if !learned {
+            format!("LEARN | LV {}", skill.minimum_level)
+        } else if cooldown > 0 {
+            format!("{:.1}s RECOVERY", cooldown as f32 / TICK_HZ as f32)
+        } else if c.focus < skill.focus_cost {
+            format!("NEED {}", c.class().resource.name.to_uppercase())
+        } else if label.0 == battle.skill_index {
+            "SELECTED | READY".into()
+        } else {
+            "READY".into()
+        };
+        set_ui_text(
+            &mut text,
+            format!(
+                "{hotkey}  {}\n{} {}\n{state}",
+                skill.name,
+                skill.focus_cost,
+                c.class().resource.name
+            ),
+        );
+        color.0 = if !learned {
+            Color::srgb(0.58, 0.55, 0.49)
+        } else if c.focus < skill.focus_cost {
+            Color::srgb(0.94, 0.52, 0.39)
+        } else {
+            PARCHMENT
+        };
+    }
+    for (slot, mut node) in &mut recovery {
+        let Some(skill) = c.class().skills.get(slot.0) else {
+            continue;
+        };
+        let remaining = c.cooldowns.get(&skill.id).copied().unwrap_or(0);
+        let height = percent(
+            100.0 * (remaining as f32 / skill.cooldown_ticks.max(1) as f32).clamp(0.0, 1.0),
+        );
+        if node.height != height {
+            node.height = height;
+        }
+    }
+    for (action, mut border) in &mut frames {
+        if let Action::SelectSkill(index) = action {
+            *border = BorderColor::all(if *index == battle.skill_index {
+                character_color(&c.class().resource.color)
+            } else {
+                Color::srgb(0.34, 0.25, 0.12)
+            });
+        }
+    }
+}
+
+fn scroll_lore(
+    battle: Res<Battle>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut wheel: MessageReader<MouseWheel>,
+    mut panel: Single<(&mut ScrollPosition, &ComputedNode), With<LorePanel>>,
+    mut previous: Local<(CampaignPanel, usize)>,
+) {
+    let open = battle.creator.is_none() && (battle.help || battle.panel != CampaignPanel::Closed);
+    if !open {
+        wheel.clear();
+        return;
+    }
+    let (scroll, computed) = &mut *panel;
+    if previous.0 != battle.panel {
+        scroll.y = 0.0;
+        *previous = (battle.panel, battle.item_index);
+    } else if battle.panel == CampaignPanel::Inventory && previous.1 != battle.item_index {
+        // The full inventory stays in the scroll container; selection reveals its row.
+        scroll.y = (battle.item_index.saturating_sub(2) as f32 * 37.0).max(0.0);
+        previous.1 = battle.item_index;
+    }
+    for event in wheel.read() {
+        let step = if event.unit == bevy::input::mouse::MouseScrollUnit::Line {
+            35.0
+        } else {
+            1.0
+        };
+        scroll.y -= event.y * step;
+    }
+    if keys.just_pressed(KeyCode::PageDown) {
+        scroll.y += 260.0;
+    }
+    if keys.just_pressed(KeyCode::PageUp) {
+        scroll.y -= 260.0;
+    }
+    let maximum = ((computed.content_size().y - computed.size().y)
+        * computed.inverse_scale_factor())
+    .max(0.0);
+    scroll.y = scroll.y.clamp(0.0, maximum);
 }
 
 fn camera_transform(orbit: &Orbit) -> Transform {
@@ -1187,7 +1886,9 @@ fn camera_input(
         orbit.yaw += dt;
     }
     for event in wheel.read() {
-        orbit.height = (orbit.height - event.y * 1.8).clamp(9.0, 65.0);
+        if !battle.help && battle.panel == CampaignPanel::Closed {
+            orbit.height = (orbit.height - event.y * 1.8).clamp(9.0, 65.0);
+        }
     }
     orbit.focus.x = orbit.focus.x.clamp(-4.0, 52.0);
     orbit.focus.z = orbit.focus.z.clamp(-4.0, 40.0);
@@ -1198,6 +1899,35 @@ fn camera_input(
             viewport_height: orbit.height,
         };
     }
+}
+
+fn read_save_with_legacy(path: &str, legacy: Option<&str>) -> Result<(SimWorld, bool), String> {
+    let (data, used_legacy) = match std::fs::read_to_string(path) {
+        Ok(data) => (data, false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound && legacy.is_some() => {
+            let previous = legacy.expect("checked legacy path");
+            (
+                std::fs::read_to_string(previous)
+                    .map_err(|error| format!("{previous}: {error}"))?,
+                true,
+            )
+        }
+        Err(error) => return Err(format!("{path}: {error}")),
+    };
+    SimWorld::load_json(&data)
+        .map(|world| (world, used_legacy))
+        .map_err(|error| format!("{error:?}"))
+}
+
+fn write_save_atomic(path: &str, data: &str) -> Result<(), std::io::Error> {
+    use std::io::Write;
+    let target = std::path::Path::new(path);
+    let temp = target.with_extension("pending-save");
+    let mut output = std::fs::File::create(&temp)?;
+    output.write_all(data.as_bytes())?;
+    output.sync_all()?;
+    drop(output);
+    std::fs::rename(&temp, target)
 }
 
 fn keyboard_input(
@@ -1216,6 +1946,19 @@ fn keyboard_input(
         battle.ui_keyboard_consumed = false;
         text_events.clear();
         return;
+    }
+    if keys.just_pressed(KeyCode::F9) {
+        let result = read_save_with_legacy(&cli.save_path, cli.legacy_save_path.as_deref());
+        match result {
+            Ok((world, legacy)) => {
+                battle.replace_world(world);
+                battle.notice = if legacy {
+                    "Legacy save restored and validated. F5 writes a Direvanity copy; the original remains intact."
+                } else { "Save restored and validated." }.into();
+            }
+            Err(error) => battle.notice = format!("Load rejected: {error}"),
+        }
+        battle.notice_ticks = 180;
     }
     if battle.creator.is_some() {
         if battle.editing_name {
@@ -1275,6 +2018,7 @@ fn keyboard_input(
         (KeyCode::KeyP, Action::Pause),
         (KeyCode::F1, Action::Help),
         (KeyCode::KeyR, Action::Restart),
+        (KeyCode::F4, Action::Motion),
     ] {
         if keys.just_pressed(key) {
             perform_action(action, &mut battle);
@@ -1285,6 +2029,8 @@ fn keyboard_input(
             (KeyCode::KeyJ, Action::Interact),
             (KeyCode::KeyK, Action::Skills),
             (KeyCode::KeyI, Action::Inventory),
+            (KeyCode::KeyN, Action::Journal),
+            (KeyCode::KeyM, Action::World),
             (KeyCode::BracketLeft, Action::Previous),
             (KeyCode::BracketRight, Action::Next),
             (KeyCode::KeyL, Action::Learn),
@@ -1303,6 +2049,9 @@ fn keyboard_input(
             KeyCode::Digit4,
             KeyCode::Digit5,
             KeyCode::Digit6,
+            KeyCode::Digit7,
+            KeyCode::Digit8,
+            KeyCode::Digit9,
         ]
         .iter()
         .enumerate()
@@ -1328,7 +2077,11 @@ fn keyboard_input(
                 }
             }
         }
-        if !battle.paused && battle.world.tick.saturating_sub(*last_walk) >= 4 {
+        if !battle.paused
+            && battle.panel == CampaignPanel::Closed
+            && !battle.help
+            && battle.world.tick.saturating_sub(*last_walk) >= 4
+        {
             let x = i32::from(keys.pressed(KeyCode::KeyD)) - i32::from(keys.pressed(KeyCode::KeyA));
             let z = i32::from(keys.pressed(KeyCode::KeyS)) - i32::from(keys.pressed(KeyCode::KeyW));
             if (x != 0 || z != 0)
@@ -1370,7 +2123,7 @@ fn keyboard_input(
     }
     if keys.just_pressed(KeyCode::F5) {
         match battle.world.save_json() {
-            Ok(data) => match std::fs::write(&cli.save_path, data) {
+            Ok(data) => match write_save_atomic(&cli.save_path, &data) {
                 Ok(()) => battle.notice = format!("Saved {}", cli.save_path),
                 Err(error) => battle.notice = format!("Save failed: {error}"),
             },
@@ -1378,23 +2131,10 @@ fn keyboard_input(
         }
         battle.notice_ticks = 180;
     }
-    if keys.just_pressed(KeyCode::F9) {
-        let result = std::fs::read_to_string(&cli.save_path)
-            .map_err(|e| format!("{e}"))
-            .and_then(|data| SimWorld::load_json(&data).map_err(|e| format!("{e:?}")));
-        match result {
-            Ok(world) => {
-                battle.replace_world(world);
-                battle.notice = "Save restored and validated.".into();
-            }
-            Err(error) => battle.notice = format!("Load rejected: {error}"),
-        }
-        battle.notice_ticks = 180;
-    }
     if keys.just_pressed(KeyCode::F12) {
         commands
             .spawn(Screenshot::primary_window())
-            .observe(save_to_disk("dreadmarch-screenshot.png"));
+            .observe(save_to_disk("direvanity-screenshot.png"));
     }
 }
 
@@ -1417,7 +2157,7 @@ fn pointer_input(
         || cursor.y
             > window.height()
                 - if battle.world.campaign.is_some() {
-                    220.0
+                    310.0
                 } else {
                     145.0
                 }
@@ -1628,6 +2368,42 @@ fn perform_action(action: Action, battle: &mut Battle) {
             };
             battle.help = false;
         }
+        Action::Journal | Action::World => {
+            let target = if action == Action::Journal {
+                CampaignPanel::Journal
+            } else {
+                CampaignPanel::World
+            };
+            battle.panel = if battle.panel == target {
+                CampaignPanel::Closed
+            } else {
+                target
+            };
+            battle.help = false;
+        }
+        Action::SelectSkill(index) => {
+            if let Some(c) = &battle.world.campaign
+                && let Some(skill) = c.class().skills.get(index)
+            {
+                battle.skill_index = index;
+                if c.learned.contains(&skill.id) {
+                    battle.cast_mode = true;
+                    battle.notice = format!(
+                        "{} selected. Click the world or press Space to cast.",
+                        skill.name
+                    );
+                } else {
+                    battle.panel = CampaignPanel::Skills;
+                    battle.cast_mode = false;
+                    battle.notice = format!(
+                        "{} is unlearned. Review its requirements and press L to learn.",
+                        skill.name
+                    );
+                }
+                battle.notice_ticks = 180;
+            }
+        }
+        Action::Motion => battle.reduced_motion = !battle.reduced_motion,
         Action::Previous => battle.cycle_selection(false),
         Action::Next => battle.cycle_selection(true),
         Action::Learn => battle.learn_selected(),
@@ -1722,7 +2498,12 @@ fn perform_action(action: Action, battle: &mut Battle) {
 }
 
 fn step_simulation(mut battle: ResMut<Battle>, cli: Res<Cli>) {
-    if !battle.paused && battle.creator.is_none() && !cli.smoke {
+    if !battle.paused
+        && battle.creator.is_none()
+        && battle.panel == CampaignPanel::Closed
+        && !battle.help
+        && !cli.smoke
+    {
         battle.advance();
     }
     if battle.notice_ticks > 0 {
@@ -2077,7 +2858,14 @@ fn update_hud(
             profile.name,
             rpg::catalogue().classes.len()
         );
-        status.0 = "Choose a class, edit your appearance, then begin your journey.\nEDIT NAME: type your name; Backspace removes a character, Ctrl+A clears, Enter finishes.".into();
+        status.0 = format!(
+            "Choose a class, edit your appearance, then begin your journey. F9 resumes a saved journey.\nEDIT NAME: type your name; Backspace removes a character, Ctrl+A clears, Enter finishes.{}",
+            if battle.notice_ticks > 0 && battle.notice.starts_with("Load rejected") {
+                format!("\n{}", battle.notice)
+            } else {
+                String::new()
+            }
+        );
         *help.1 = Visibility::Hidden;
         return;
     }
@@ -2085,12 +2873,13 @@ fn update_hud(
         let hero = battle.world.commander();
         let health = hero.map_or("FALLEN".into(), |u| format!("{}/{}", u.hp, u.max_hp));
         hud.0 = format!(
-            "{}  |  {}  |  LEVEL {}\n{}   HP {}   FOCUS {}   XP {}/{}   POINTS {}",
+            "{}  |  {}  |  LEVEL {}\n{}   HP {}   {} {}   XP {}/{}   POINTS {}",
             c.character.name,
             c.class().name,
             c.level,
             rpg::region_name(&c.region),
             health,
+            c.class().resource.name.to_uppercase(),
             c.focus,
             c.experience,
             c.next_level_experience(),
@@ -2106,7 +2895,7 @@ fn update_hud(
                     .unwrap_or(0)
                     .div_ceil(TICK_HZ);
                 format!(
-                    "{} | {} | {} focus{}",
+                    "{} | {} | {} {}{}",
                     s.name,
                     if c.learned.contains(&s.id) {
                         "LEARNED"
@@ -2114,6 +2903,7 @@ fn update_hud(
                         "UNLEARNED"
                     },
                     s.focus_cost,
+                    c.class().resource.name,
                     if recovery > 0 {
                         format!(" | {recovery}s")
                     } else {
@@ -2131,17 +2921,18 @@ fn update_hud(
                 }
             });
         status.0 = format!(
-            "{}  |  {}  |  {}\nQUEST: {}\n{}{}",
+            "{}  |  {}  |  {}\n{}{}",
             if battle.world.status == MatchStatus::Defeat {
                 "FALLEN | F9 LOAD OR R RESTART"
             } else if battle.paused {
                 "PAUSED"
+            } else if battle.panel != CampaignPanel::Closed || battle.help {
+                "READING | WORLD PAUSED"
             } else {
                 "THE ASHEN CONCORD"
             },
             skill,
             nearby,
-            c.quest_text(),
             c.dialogue,
             if battle.notice_ticks > 0 {
                 format!("\n{}", battle.notice)
@@ -2161,20 +2952,36 @@ fn update_hud(
                 let rows = c.class().skills.iter().enumerate().map(|(i, s)| format!("{} {} | {} | level {}{}",
                     if i == battle.skill_index { ">" } else { " " }, s.name, s.branch, s.minimum_level,
                     if c.learned.contains(&s.id) { "  [learned]" } else { "" })).collect::<Vec<_>>().join("\n");
-                let selected = battle.selected_skill().map_or(String::new(), |s| format!("\n\n{}\n{}\n{} | {} focus | {}s recovery\nPrerequisite: {}",
-                    s.name, s.description, s.kind, s.focus_cost, s.cooldown_ticks.div_ceil(TICK_HZ),
+                let selected = battle.selected_skill().map_or(String::new(), |s| format!("\n\n{}\n{}\n{} | {} {} | {}s recovery\nPrerequisite: {}",
+                    s.name, s.description, s.kind, s.focus_cost, c.class().resource.name, s.cooldown_ticks.div_ceil(TICK_HZ),
                     s.requires.as_ref().and_then(|id| c.class().skills.iter().find(|p| &p.id == id)).map_or("None", |p| p.name.as_str())));
                 format!("{} DISCIPLINES  |  {} POINTS\n[ / ] select | L learn | Space cast\n\n{}{}\n\nT: retrain freely in Hearthmere. K: close.", c.class().name.to_uppercase(), c.skill_points, rows, selected)
             }
             CampaignPanel::Inventory => {
-                let start = battle.item_index / 12 * 12;
-                let rows = c.inventory.iter().enumerate().skip(start).take(12).map(|(i, item)| format!("{} {}\n    {} | {} | power {}{}",
+                let rows = c.inventory.iter().enumerate().map(|(i, item)| format!("{} {}\n    {} | {} | power {}{}",
                     if i == battle.item_index { ">" } else { " " }, item.name, item.rarity, item.slot, item.power,
                     if c.equipped.get(&item.slot) == Some(&item.id) { " | EQUIPPED" } else { "" })).collect::<Vec<_>>().join("\n");
-                format!("INVENTORY  |  {} ITEMS\n[ / ] select | U equip | I close\n\n{}\n\nApproach a dropped item and press J to collect it.",
+                format!("INVENTORY  |  {} ITEMS\n[ / ] select | U equip | I close\nWheel or Page Up/Down scrolls the complete pack.\n\n{}\n\nApproach a dropped item and press J to collect it.",
                     c.inventory.len(), if rows.is_empty() { "Your pack is empty." } else { &rows })
             }
-            CampaignPanel::Closed => "THE ASHEN CONCORD\n\nCreate a wanderer and follow Maelin's quest.\nAll encounters and progression work solo.\n\nRight-click or WASD moves your hero.\nNearby enemies are attacked automatically.\nSpace casts the selected class skill at the cursor.\n1-6 cast your learned active skills in tree order.\nJ talks, opens caches, collects loot or uses a gate.\n\nK opens disciplines. [ / ] chooses a skill.\nL learns it with an available point.\nI opens inventory; [ / ] selects and U equips.\nT retrains freely in Hearthmere.\nF2 opens the creator; Begin starts a new journey.\n\nQ/E orbit | Wheel zoom | C center\nP pause | R restart journey | F5 save | F9 load\nF12 screenshot | Esc close/exit | F1 close help\n\nPlayable foundation with procedural character art.\nThe full campaign and production class kits\nremain development goals.".into(),
+            CampaignPanel::Journal => {
+                let quests = rpg::journal(c).iter().map(|entry| format!("{} | {} [{}]\n{}", entry.title, entry.kind, entry.status.to_uppercase(), entry.objective)).collect::<Vec<_>>().join("\n\n");
+                let endgame = &c.chronicle.expedition;
+                let run = endgame.active.as_ref().map_or("No expedition is in progress.".into(), |run| format!("Depth {} | {}\n{}", run.depth, run.modifier, run.objective_text()));
+                format!("THE WANDERER'S JOURNAL\n\n{}\n\nLAST CONVERSATION\n{}\n\nFRACTURED CONCORD\n{}\n{} completed | deepest clear {}\n\nN: close | Wheel or Page Up/Down: scroll.\nThe world pauses while this journal is open.", quests, c.dialogue, run, endgame.completed, endgame.best_depth)
+            }
+            CampaignPanel::World => {
+                let regions = rpg::atlas().iter().map(|region| {
+                    let roads = region.connections.iter().map(|id| rpg::region_name(id)).collect::<Vec<_>>().join(" / ");
+                    format!("{} {} [{}]\n{}\nRoads: {}", if region.id == c.region { ">" } else { "*" }, region.name, if c.visited.contains(region.id) { "VISITED" } else { "UNVISITED" }, region.description, roads)
+                }).collect::<Vec<_>>().join("\n\n");
+                let local = rpg::campaign_points_of_interest(c).iter().map(|poi| {
+                    let road = poi.destination.as_ref().map_or(String::new(), |region| format!(" -> {}", rpg::region_name(region)));
+                    format!("{}{}\n    {}  |  ({:.1}, {:.1})", poi.name, road, poi.kind, poi.position.x as f32 / 1000.0, poi.position.z as f32 / 1000.0)
+                }).collect::<Vec<_>>().join("\n");
+                format!("WORLD ATLAS\n\nOVERWORLD | ALL REGIONS\n{}\n\nLOCAL | {}\n{}\n\nApproach a road or choice marker and press J.\nRoads can require story progress before opening.\nM: close | Wheel or Page Up/Down: scroll.", regions, rpg::region_name(&c.region), local)
+            }
+            CampaignPanel::Closed => "THE ASHEN CONCORD\n\nCreate a wanderer and follow Maelin's quest.\nAll encounters and progression work solo.\n\nRight-click or WASD moves your hero.\nNearby enemies are attacked automatically.\nSpace casts the selected class skill at the cursor.\n1-9 cast your learned active skills in tree order.\nJ talks, opens caches, collects loot or uses a gate.\n\nK opens disciplines. [ / ] chooses a skill.\nL learns it with an available point.\nI opens inventory; [ / ] selects and U equips.\nN: journal | M: world atlas | F4: reduced motion.\nPanels pause the world; scroll to view all entries.\nT retrains freely in Hearthmere.\nF2 opens the creator; Begin starts a new journey.\n\nQ/E orbit | Wheel zoom | C center\nP pause | R restart journey | F5 save | F9 load\nF12 screenshot | Esc close/exit | F1 close help\n\nPlayable foundation with procedural character art.\nThe full campaign and production class kits\nremain development goals.".into(),
         };
         return;
     }
@@ -2255,7 +3062,7 @@ fn update_hud(
 
 fn draw_tactical(mut gizmos: Gizmos, mut battle: ResMut<Battle>, time: Res<Time>) {
     if let Some(c) = &battle.world.campaign {
-        for poi in rpg::points_of_interest(&c.region) {
+        for poi in rpg::campaign_points_of_interest(c) {
             gizmos.circle(
                 Isometry3d::new(point3(poi.position, 0.13), Quat::from_rotation_x(FRAC_PI_2)),
                 if poi.kind == "gate" { 2.0 } else { 0.9 },
@@ -2791,5 +3598,110 @@ mod tests {
         assert!(battle.spell_effect.is_none());
         assert_eq!(battle.command_failures, 1);
         assert_eq!(battle.world.commander_cooldown, 0);
+    }
+
+    #[test]
+    fn native_hotbar_reaches_all_class_skills_and_never_casts_unlearned_actions() {
+        for class in &rpg::catalogue().classes {
+            let mut battle = Battle::campaign(
+                CharacterCreation {
+                    class_id: class.id.clone(),
+                    ..default()
+                },
+                false,
+            );
+            for (index, skill) in class
+                .skills
+                .iter()
+                .enumerate()
+                .filter(|(_, skill)| skill.kind == "active")
+            {
+                let learned = battle
+                    .world
+                    .campaign
+                    .as_ref()
+                    .unwrap()
+                    .learned
+                    .contains(&skill.id);
+                let checksum = battle.world.checksum();
+                perform_action(Action::SelectSkill(index), &mut battle);
+                assert_eq!(battle.skill_index, index);
+                assert_eq!(battle.cast_mode, learned);
+                assert_eq!(
+                    battle.world.checksum(),
+                    checksum,
+                    "selection cannot mutate simulation"
+                );
+                if !learned {
+                    assert_eq!(battle.panel, CampaignPanel::Skills);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn native_reading_panels_pause_time_and_preserve_manual_pause_state() {
+        let mut app = App::new();
+        app.insert_resource(Battle::campaign(CharacterCreation::default(), false))
+            .init_resource::<Cli>()
+            .add_systems(Update, step_simulation);
+        for action in [
+            Action::Inventory,
+            Action::Journal,
+            Action::World,
+            Action::Skills,
+        ] {
+            let before = app.world().resource::<Battle>().world.tick;
+            perform_action(action, &mut app.world_mut().resource_mut::<Battle>());
+            app.update();
+            assert_eq!(app.world().resource::<Battle>().world.tick, before);
+            perform_action(action, &mut app.world_mut().resource_mut::<Battle>());
+            app.update();
+            assert_eq!(app.world().resource::<Battle>().world.tick, before + 1);
+        }
+        {
+            let mut battle = app.world_mut().resource_mut::<Battle>();
+            perform_action(Action::Pause, &mut battle);
+            perform_action(Action::Journal, &mut battle);
+            perform_action(Action::Motion, &mut battle);
+            perform_action(Action::Journal, &mut battle);
+            assert!(battle.paused && battle.reduced_motion);
+        }
+        let before = app.world().resource::<Battle>().world.tick;
+        app.update();
+        assert_eq!(app.world().resource::<Battle>().world.tick, before);
+    }
+
+    #[test]
+    fn legacy_save_migration_preserves_original_and_rejects_corrupt_new_save() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "direvanity-migrate-{}-{unique}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let legacy = directory.join("dreadmarch-campaign.json");
+        let current = directory.join("direvanity-campaign.json");
+        let world = SimWorld::new_campaign(SEED, CharacterCreation::default()).unwrap();
+        let original = world.save_json().unwrap();
+        std::fs::write(&legacy, &original).unwrap();
+        let (restored, used_legacy) =
+            read_save_with_legacy(current.to_str().unwrap(), legacy.to_str()).unwrap();
+        assert!(used_legacy);
+        assert_eq!(restored.checksum(), world.checksum());
+        write_save_atomic(current.to_str().unwrap(), &restored.save_json().unwrap()).unwrap();
+        assert_eq!(std::fs::read_to_string(&legacy).unwrap(), original);
+        assert!(
+            !read_save_with_legacy(current.to_str().unwrap(), legacy.to_str())
+                .unwrap()
+                .1
+        );
+        std::fs::write(&current, "corrupt new save").unwrap();
+        assert!(read_save_with_legacy(current.to_str().unwrap(), legacy.to_str()).is_err());
+        assert_eq!(std::fs::read_to_string(&legacy).unwrap(), original);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

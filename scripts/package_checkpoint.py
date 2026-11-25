@@ -13,7 +13,7 @@ parser.add_argument('--native', type=Path)
 parser.add_argument('--artifact', type=Path, action='append', default=[],
                     help='Explicit release artifact to include under release/; repeat for each ZIP or checksum file.')
 parser.add_argument('--allow-dirty', action='store_true')
-parser.add_argument('--output', type=Path, default=root/'dist/Dreadmarch-checkpoint.zip')
+parser.add_argument('--output', type=Path, default=root/'dist/Direvanity-checkpoint.zip')
 args = parser.parse_args()
 def git(*arguments):
     return subprocess.check_output(['git',*arguments],cwd=root).decode().strip()
@@ -22,7 +22,7 @@ if dirty and not args.allow_dirty:
     raise SystemExit('Uncommitted source changes: checkpoint first or explicitly pass --allow-dirty.')
 source_names = git('ls-files','--cached','--others','--exclude-standard','-z').split('\0')
 files = [(root/name,'source/'+name) for name in sorted(set(source_names)) if name]
-for name in ['Dreadmarch-campaign.html', 'Dreadmarch-playtest.html']:
+for name in ['Direvanity-campaign.html', 'Direvanity-playtest.html']:
     browser = root/'dist'/name
     if not browser.is_file():
         raise SystemExit('Build both browser modes with scripts/build_web.py first.')
@@ -31,7 +31,9 @@ for name in ['Dreadmarch-campaign.html', 'Dreadmarch-playtest.html']:
 # documented by docs/HISTORY_ALPHA1.md and its published release; they must not
 # appear to validate newly built campaign binaries.
 for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
-             'rpg-controls-proof.json', 'rpg-browser-live-receipt.json', 'rpg-rust-tests.log',
+             'rpg-controls-proof.json', 'expedition-modifier-proof.json', 'numeric-boundary-proof.json', 'rpg-browser-live-receipt.json', 'rpg-rust-tests.log',
+             'rpg-chapter-complete-save.json', 'rpg-active-expedition-save.json',
+             'rpg-expedition-complete-save.json',
              'rpg-verification.json', 'rpg-extracted-native-receipt.json',
              'native-rts-regression.png', 'native-rts-regression.log', 'native-clippy.log',
              'native-campaign-smoke.png', 'native-campaign-smoke-creator.png',
@@ -39,13 +41,13 @@ for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
              'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg',
              'dreadmarch-skills-live.jpg', 'dreadmarch-completed-journal.jpg',
              'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json',
-             'release-alpha2/public-release-assets.json', 'release-alpha2/release-job-status.json']:
+             'direvanity-verification.json', 'production-plan-validation.json', 'direvanity-live-browser.png', 'direvanity-creator.png', 'direvanity-world.png', 'direvanity-journal.png']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 # Preserve optimized CI and freshly extracted-package evidence under their
 # source-specific paths. Never overwrite the separate development-build proof.
-for folder in ['release-alpha2/linux-ci', 'release-alpha2/windows-ci',
-               'release-alpha2/extracted-runtime']:
+for folder in ['qa', 'release-direvanity/linux-ci', 'release-direvanity/windows-ci',
+               'release-direvanity/extracted-runtime']:
     for path in sorted((root/'dist'/folder).glob('*')):
         if path.is_file() and path.suffix in {'.json', '.log', '.png'}:
             files.append((path, 'verification/'+folder+'/'+path.name))
@@ -62,21 +64,21 @@ for _, name in files:
     if name in archive_names:
         raise SystemExit(f'Archive name collision: {name}')
     archive_names.add(name)
-receipt = {'schema':1,'repository':'https://github.com/Herbertofury/Dreadmarch',
+receipt = {'schema':2,'game':'Direvanity','repository':'https://github.com/Herbertofury/Dreadmarch',
            'source_commit':git('rev-parse','HEAD'),'dirty_source':bool(dirty),
            'pending_changes':dirty.splitlines(),'files':[]}
-guide = ['DREADMARCH - PLAYABLE ENGINE FOUNDATION', '',
+guide = ['DIREVANITY - PLAYABLE ENGINE FOUNDATION', '',
          'Play online: https://herbertofury.github.io/Dreadmarch/',
-         'Play offline: open play/Dreadmarch-campaign.html in a modern desktop browser.',
-         'Optional legacy RTS encounter: play/Dreadmarch-playtest.html.',
+         'Play offline: open play/Direvanity-campaign.html in a modern desktop browser.',
+         'Optional legacy RTS encounter: play/Direvanity-playtest.html.',
          'The browser and native clients use the same Rust game simulation.', '',
          'NATIVE PACKAGES']
 for artifact in args.artifact:
-    if artifact.name == 'Dreadmarch-windows-x64.zip':
-        guide.append('Windows: unpack release/Dreadmarch-windows-x64.zip, then run dreadmarch.exe.')
+    if artifact.name == 'Direvanity-windows-x64.zip':
+        guide.append('Windows: unpack release/Direvanity-windows-x64.zip, then run direvanity.exe.')
         guide.append('If VCRUNTIME140.dll is missing, install Microsoft Visual C++ x64 runtime: https://aka.ms/vc14/vc_redist.x64.exe')
-    if artifact.name == 'Dreadmarch-linux-x64.zip':
-        guide.append('Linux: unpack release/Dreadmarch-linux-x64.zip, then run ./dreadmarch.')
+    if artifact.name == 'Direvanity-linux-x64.zip':
+        guide.append('Linux: unpack release/Direvanity-linux-x64.zip, then run ./direvanity.')
         guide.append('Linux requires the glibc version recorded in its BUILD-RECEIPT.json, X11 runtime libraries and a working graphics driver.')
 if args.native:
     guide.append('Included native executable: play/'+args.native.name)

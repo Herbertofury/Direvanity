@@ -1,4 +1,4 @@
-# Dreadmarch: single-player RPG direction
+# Direvanity: single-player RPG direction
 
 Accepted direction: 25 November 2026, America/Denver.
 
@@ -25,7 +25,7 @@ combat references. The campaign must work offline and be completable solo, with 
 
 **Complete backup delivery is a required final gate.** The full clean-source checkpoint must pass
 independent payload verification and complete-file download/readback before delivery is considered
-complete. The release asset `Dreadmarch-delivery.json` records that post-transfer result and exact
+complete. The release asset `Direvanity-delivery.json` records that post-transfer result and exact
 archive identity; it is written after the transfer so the archive does not contain a claim about its
 own future upload. See [STATUS.md](STATUS.md).
 

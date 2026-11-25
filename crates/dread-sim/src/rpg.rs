@@ -3,6 +3,9 @@ use super::*;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+mod chronicle;
+pub use chronicle::*;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillDefinition {
     pub id: String,
@@ -23,6 +26,17 @@ pub struct SkillDefinition {
     pub source_scope: String,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceProfile {
+    pub name: String,
+    pub color: String,
+    pub style: String,
+    pub maximum: u32,
+    pub idle_regen_ticks: u32,
+    pub combat_regen_ticks: u32,
+    pub kill_gain: u32,
+    pub description: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassDefinition {
     pub id: String,
     pub name: String,
@@ -30,6 +44,7 @@ pub struct ClassDefinition {
     pub description: String,
     pub color: String,
     pub combat_style: String,
+    pub resource: ResourceProfile,
     pub branches: Vec<String>,
     pub skills: Vec<SkillDefinition>,
 }
@@ -134,7 +149,7 @@ pub struct CampaignState {
     pub region: String,
     pub level: u32,
     pub experience: u32,
-    pub skill_points: u32,
+    pub skill_points: u64,
     pub learned: BTreeSet<String>,
     pub cooldowns: BTreeMap<String, u32>,
     pub focus: u32,
@@ -149,6 +164,8 @@ pub struct CampaignState {
     pub flags: BTreeSet<String>,
     pub main_quest: u32,
     pub dialogue: String,
+    #[serde(default)]
+    pub chronicle: ChronicleState,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct PointOfInterest {
@@ -163,6 +180,10 @@ pub fn region_name(id: &str) -> &'static str {
         "hearthmere" => "Hearthmere",
         "hollow_moor" => "The Hollow Moor",
         "forgotten_sanctum" => "The Forgotten Sanctum",
+        "ember_coast" => "The Ember Coast",
+        "glasswood" => "The Glasswood",
+        "drowned_archive" => "The Drowned Archive",
+        "expedition" => "The Shattered Concord",
         _ => "Unknown",
     }
 }
@@ -229,6 +250,8 @@ pub fn points_of_interest(region: &str) -> Vec<PointOfInterest> {
         ],
         _ => vec![],
     };
+    let mut rows = rows;
+    rows.extend(chronicle::extra_points(region));
     rows.into_iter()
         .map(|(id, name, kind, x, z, destination)| PointOfInterest {
             id: id.into(),
@@ -256,7 +279,7 @@ impl CampaignState {
                 "Cross the Hollow Moor. Enter the Forgotten Sanctum and recover the Ashen Concord."
             }
             2 => "Return the Ashen Concord to Archivist Maelin in Hearthmere.",
-            _ => "Prologue complete. Explore, recover lost caches and develop your character.",
+            _ => self.chronicle.quest_text(),
         }
     }
     fn gain_experience(&mut self, amount: u32) {
@@ -295,6 +318,10 @@ impl World {
         let starter = class(&creation.class_id).expect("validated class").skills[0]
             .id
             .clone();
+        let resource_maximum = class(&creation.class_id)
+            .expect("validated class")
+            .resource
+            .maximum;
         let mut world = World::new(seed);
         world.version = 2;
         world.units.retain(|u| u.kind == UnitKind::Commander);
@@ -313,7 +340,7 @@ impl World {
             skill_points: 2,
             learned: BTreeSet::from([starter]),
             cooldowns: BTreeMap::new(),
-            focus: 100,
+            focus: resource_maximum,
             ward_ticks: 0,
             effects: vec![],
             inventory: vec![],
@@ -324,6 +351,7 @@ impl World {
             visited: BTreeSet::from(["hearthmere".into()]),
             flags: BTreeSet::new(),
             main_quest: 0,
+            chronicle: ChronicleState::default(),
             dialogue: "The bells have fallen silent. Find Archivist Maelin beside the old road."
                 .into(),
         });
@@ -332,7 +360,16 @@ impl World {
         Ok(world)
     }
     fn set_campaign_map(&mut self, region: &str) {
-        self.map = Self::campaign_map(region);
+        self.map = if region == "expedition" {
+            chronicle::expedition_map(
+                self.campaign
+                    .as_ref()
+                    .and_then(|c| c.chronicle.expedition.active.as_ref())
+                    .map_or(0, |run| run.seed),
+            )
+        } else {
+            Self::campaign_map(region)
+        };
     }
     fn campaign_map(region: &str) -> NavGrid {
         let mut map = NavGrid::new(48, 36);
@@ -357,6 +394,24 @@ impl World {
                 (33, 6, 36, 13),
                 (34, 27, 40, 30),
             ],
+            "ember_coast" => vec![
+                (14, 7, 18, 13),
+                (23, 23, 28, 27),
+                (33, 6, 36, 12),
+                (36, 29, 42, 32),
+            ],
+            "glasswood" => vec![
+                (14, 7, 18, 14),
+                (24, 8, 28, 13),
+                (22, 24, 27, 29),
+                (34, 7, 39, 12),
+            ],
+            "drowned_archive" => vec![
+                (14, 3, 17, 14),
+                (14, 23, 17, 33),
+                (27, 8, 30, 14),
+                (27, 24, 30, 32),
+            ],
             _ => vec![
                 (12, 3, 15, 14),
                 (12, 23, 15, 33),
@@ -376,6 +431,11 @@ impl World {
     }
     pub fn stats_for(&self, unit: &Unit) -> UnitStats {
         let mut stats = unit.kind.stats();
+        if unit.team == Team::Enemy
+            && let Some(c) = &self.campaign
+        {
+            stats = chronicle::enemy_stats(unit.kind, &c.region, &c.chronicle);
+        }
         if unit.kind == UnitKind::Commander
             && unit.team == Team::Player
             && let Some(c) = &self.campaign
@@ -405,7 +465,14 @@ impl World {
         stats
     }
     pub(super) fn movement_speed(&self, unit: &Unit) -> i32 {
-        let speed = unit.kind.stats().speed_per_tick;
+        // Movement does not need to rescan the hero's learned skills and equipment.
+        let speed = if unit.team == Team::Enemy
+            && let Some(c) = &self.campaign
+        {
+            chronicle::enemy_stats(unit.kind, &c.region, &c.chronicle).speed_per_tick
+        } else {
+            unit.kind.stats().speed_per_tick
+        };
         if self.campaign.as_ref().is_some_and(|c| {
             c.effects
                 .iter()
@@ -456,7 +523,7 @@ impl World {
             return Err(err("Return to Hearthmere to retrain freely."));
         }
         c.learned = BTreeSet::from([c.class().skills[0].id.clone()]);
-        c.skill_points = c.level.saturating_add(1);
+        c.skill_points = u64::from(c.level) + 1;
         c.cooldowns.clear();
         c.dialogue = "Your training has been restored. Choose your disciplines anew.".into();
         Ok(())
@@ -480,7 +547,11 @@ impl World {
             return Err(err("This skill is still recovering."));
         }
         if c.focus < skill.focus_cost {
-            return Err(err("Not enough focus. Let it recover between attacks."));
+            return Err(err(format!(
+                "Not enough {}. {}",
+                c.class().resource.name,
+                c.class().resource.description
+            )));
         }
         let hero = self.commander().ok_or(CommandError::MatchFinished)?;
         let hero_id = hero.id;
@@ -581,8 +652,36 @@ impl World {
         }
         c.cooldowns.retain(|_, value| *value > 0);
         c.ward_ticks = c.ward_ticks.saturating_sub(1);
-        if self.tick.is_multiple_of(6) {
-            c.focus = (c.focus + 1).min(100);
+        let resource = &c.class().resource;
+        if c.focus < resource.maximum {
+            let in_combat = self
+                .units
+                .iter()
+                .find(|u| u.kind == UnitKind::Commander)
+                .is_some_and(|hero| {
+                    self.units.iter().any(|u| {
+                        u.team == Team::Enemy
+                            && u.hp > 0
+                            && hero.position.distance_squared(u.position) <= 12_000u64.pow(2)
+                    })
+                });
+            let mut interval = if in_combat {
+                resource.combat_regen_ticks
+            } else {
+                resource.idle_regen_ticks
+            };
+            if c.region == "expedition"
+                && c.chronicle
+                    .expedition
+                    .active
+                    .as_ref()
+                    .is_some_and(|run| run.modifier == "drought")
+            {
+                interval *= 2;
+            }
+            if self.tick.is_multiple_of(u64::from(interval)) {
+                c.focus = c.focus.saturating_add(1).min(resource.maximum);
+            }
         }
         for effect in &mut c.effects {
             effect.remaining = effect.remaining.saturating_sub(1);
@@ -615,6 +714,18 @@ impl World {
             .iter()
             .filter(|u| u.hp <= 0 && u.team == Team::Enemy)
         {
+            c.focus = c
+                .focus
+                .saturating_add(c.class().resource.kill_gain)
+                .min(c.class().resource.maximum);
+            if let Some(run) = &mut c.chronicle.expedition.active
+                && c.region == "expedition"
+            {
+                run.kills = run.kills.saturating_add(1);
+                if unit.id == run.warden_id {
+                    run.warden_defeated = true;
+                }
+            }
             c.gain_experience(if unit.kind == UnitKind::Brute {
                 100
             } else {
@@ -691,13 +802,16 @@ impl World {
         if position.distance_squared(poi.position) > 3_500u64.pow(2) {
             return Err(err("Move closer to interact."));
         }
+        if chronicle::is_chronicle_interaction(target) {
+            return self.interact_chronicle(target);
+        }
         if let Some(region) = poi.destination {
             return self.travel(&region);
         }
         let enemies_alive = self.units.iter().any(|u| u.team == Team::Enemy);
         let key = format!("{}:{target}", c.region);
         let creates_item = match target {
-            "elder" => c.main_quest == 2,
+            "elder" => c.main_quest == 2 || c.chronicle.chapter == 4,
             "merchant" => {
                 c.flags.contains("satchel_found") && !c.flags.contains("satchel_returned")
             }
@@ -710,7 +824,23 @@ impl World {
         let c = self.campaign.as_mut().expect("campaign");
         match target {
             "elder" => {
-                if c.main_quest == 0 {
+                if c.chronicle.chapter == 4 {
+                    c.chronicle.chapter = 5;
+                    c.gain_experience(480);
+                    self.economy.essence = self.economy.essence.saturating_add(220);
+                    let item = c.new_item(
+                        if c.chronicle.choice == "ward" {
+                            "Lanternbearer's Covenant"
+                        } else {
+                            "Unbound Soul Sigil"
+                        },
+                        "charm",
+                        48,
+                        "legendary",
+                    )?;
+                    c.inventory.push(item);
+                    c.dialogue = "Maelin: The archive remembers your choice. The coast is lit, the glasswood breathes, and the drowned names are ours again. The shattered Concord now opens to expeditions. Enter its rift east of town whenever you choose. Chapter complete; expeditions unlocked.".into();
+                } else if c.main_quest == 0 {
                     c.main_quest = 1;
                     c.gain_experience(40);
                     c.dialogue = "Maelin: The Ashen Concord once kept these roads safe. Its keeper has fallen silent. Cross the moor, descend into the sanctum, and bring the relic home. The old stairs lie beyond the eastern road.".into();
@@ -722,7 +852,7 @@ impl World {
                     c.inventory.push(item);
                     c.dialogue = "Maelin: You brought back more than a relic. You brought back a reason to keep the lamps burning. Beyond these roads, the other concords are breaking. Your journey has only begun. Prologue complete.".into();
                 } else {
-                    c.dialogue = if c.main_quest == 1 { "Maelin: Follow the road east. The sanctum's keeper carries the seal. Return to me when the Concord is yours." } else { "Maelin: The Concord is safe. Hearthmere will remember your name." }.into();
+                    c.dialogue = if c.main_quest == 1 { "Maelin: Follow the road east. The sanctum's keeper carries the seal. Return to me when the Concord is yours." } else { if c.chronicle.chapter == 0 { "Maelin: The Concord holds the souls of the lost. Bind it to shelter the living, or release them to follow their own road. Binding grants a brief protective ward on hostile crossings; release restores your class resource instead. The choice is permanent for this character. Choose at the two oath stones beside me. The Ember Coast waits beyond the northern road." } else { "Maelin: Follow the chapter objective in your journal. Hearthmere will remember your choice." } }.into();
                 }
             }
             "merchant" => {
@@ -744,7 +874,7 @@ impl World {
                 {
                     hero.hp = hero.max_hp;
                 }
-                c.focus = 100;
+                c.focus = c.class().resource.maximum;
             }
             "relic" => {
                 if c.main_quest == 0 {
@@ -793,9 +923,10 @@ impl World {
                 {
                     hero.hp = hero.max_hp;
                 }
-                c.focus = 100;
+                c.focus = c.class().resource.maximum;
                 c.dialogue =
-                    "The shrine steadies your breathing. Health and focus restored.".into();
+                    "The shrine steadies your breathing. Health and class resource restored."
+                        .into();
             }
             _ => return Err(err("This interaction is not available.")),
         }
@@ -817,7 +948,16 @@ impl World {
         if origin.distance_squared(gate.position) > 3_500u64.pow(2) {
             return Err(err("Reach the region's marked exit before travelling."));
         }
+        self.validate_chronicle_travel(region)?;
+        self.transition_campaign_region(region)
+    }
+    pub(super) fn transition_campaign_region(&mut self, region: &str) -> Result<(), CommandError> {
+        let c = self
+            .campaign
+            .as_ref()
+            .ok_or_else(|| err("No campaign is active."))?;
         // Validate the entire transition before changing region, identity counters or entities.
+        let extra_encounter = chronicle::encounter(region, &c.chronicle);
         let encounter: &[(i32, i32, bool)] = if !c.visited.contains(region) {
             match region {
                 "hollow_moor" => &[
@@ -834,7 +974,7 @@ impl World {
                     (32_500, 20_500, false),
                     (38_500, 18_500, true),
                 ],
-                _ => &[],
+                _ => &extra_encounter,
             }
         } else {
             &[]
@@ -864,15 +1004,21 @@ impl World {
         c.dialogue = format!("Entered {}.", region_name(region));
         self.units.retain(|u| u.team == Team::Player);
         self.set_campaign_map(region);
-        let arrival_x = if (previous == "hollow_moor" && region == "hearthmere")
-            || previous == "forgotten_sanctum"
-        {
-            41_000
-        } else {
-            6_500
-        };
+        let arrival = points_of_interest(region)
+            .iter()
+            .find(|p| p.destination.as_deref() == Some(previous.as_str()))
+            .map_or(Point::new(6_500, 18_500), |p| {
+                Point::new(
+                    if p.position.x > 24_000 {
+                        p.position.x - 2_500
+                    } else {
+                        p.position.x + 2_000
+                    },
+                    p.position.z,
+                )
+            });
         for (index, unit) in self.units.iter_mut().enumerate() {
-            let p = Point::new(arrival_x, 17_000 + (index % 5) as i32 * 600);
+            let p = Point::new(arrival.x, arrival.z + (index % 5) as i32 * 600);
             unit.position = self
                 .map
                 .nearest_walkable(p)
@@ -887,7 +1033,7 @@ impl World {
             self.campaign.as_mut().expect("campaign").ground_loot = memory.loot;
         } else {
             for &(x, z, boss) in encounter {
-                self.spawn(
+                let id = self.spawn(
                     if boss {
                         UnitKind::Brute
                     } else {
@@ -896,6 +1042,35 @@ impl World {
                     Team::Enemy,
                     Point::new(x, z),
                 )?;
+                let c = self.campaign.as_ref().expect("campaign");
+                let unit = self
+                    .units
+                    .iter_mut()
+                    .find(|u| u.id == id)
+                    .expect("spawned unit");
+                let stats = chronicle::enemy_stats(unit.kind, region, &c.chronicle);
+                unit.hp = stats.hp;
+                unit.max_hp = stats.hp;
+                if region == "expedition"
+                    && boss
+                    && let Some(run) = &mut self
+                        .campaign
+                        .as_mut()
+                        .expect("campaign")
+                        .chronicle
+                        .expedition
+                        .active
+                {
+                    run.warden_id = id;
+                }
+            }
+        }
+        let c = self.campaign.as_mut().expect("campaign");
+        if region != "hearthmere" {
+            if c.chronicle.choice == "ward" {
+                c.ward_ticks = 180;
+            } else if c.chronicle.choice == "release" {
+                c.focus = c.class().resource.maximum;
             }
         }
         self.events.clear();
@@ -910,14 +1085,20 @@ impl World {
         if region_name(&c.region) == "Unknown"
             || !c.visited.contains(&c.region)
             || c.level == 0
-            || c.focus > 100
+            || c.focus > c.class().resource.maximum
             || c.ward_ticks > 360
             || c.main_quest > 3
-            || c.experience >= c.next_level_experience()
+            || (c.level < u32::MAX && c.experience >= c.next_level_experience())
         {
             return Err(fail("Invalid character progression or region state."));
         }
-        if self.map != Self::campaign_map(&c.region)
+        self.validate_chronicle()?;
+        let current_map = if c.region == "expedition" {
+            chronicle::expedition_map(c.chronicle.expedition.active.as_ref().map_or(0, |r| r.seed))
+        } else {
+            Self::campaign_map(&c.region)
+        };
+        if self.map != current_map
             || !self.objectives.is_empty()
             || self.wave != 0
             || self.wave_ticks_remaining != 0
@@ -936,7 +1117,8 @@ impl World {
         }
         let class = c.class();
         if !c.learned.contains(&class.skills[0].id)
-            || u64::from(c.skill_points) + (c.learned.len() as u64 - 1) != u64::from(c.level) + 1
+            || (u64::from(c.level) + 1).checked_sub(c.learned.len() as u64 - 1)
+                != Some(c.skill_points)
         {
             return Err(fail(
                 "Skill-point accounting does not match character level.",
@@ -994,13 +1176,19 @@ impl World {
             {
                 return Err(fail("Invalid stored region."));
             }
-            let region_map = Self::campaign_map(region);
+            let region_map = if region == "expedition" {
+                chronicle::expedition_map(
+                    c.chronicle.expedition.active.as_ref().map_or(0, |r| r.seed),
+                )
+            } else {
+                Self::campaign_map(region)
+            };
             for u in &memory.enemies {
                 if u.id == 0
                     || u.team != Team::Enemy
                     || u.hp <= 0
                     || u.hp > u.max_hp
-                    || u.max_hp != u.kind.stats().hp
+                    || u.max_hp != chronicle::enemy_stats(u.kind, region, &c.chronicle).hp
                     || u.id >= self.next_id
                     || !ids.insert(u.id)
                     || u.attack_cooldown > u.kind.stats().attack_interval
