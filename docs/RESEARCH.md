@@ -4,7 +4,7 @@ Research date: **2026-11-24**, America/Denver. Working title: **Dreadmarch**.
 
 ## Direction
 
-Dreadmarch is an original dark-fantasy action RTS and the first consumer of a reusable Rust engine. **Diablo IV, Lost Ark, Path of Exile, and Path of Exile II are explicit creative and quality inspirations.** Their names describe the intended standard of combat, atmosphere, encounters and systems. The project intends to match and surpass those benchmarks through original execution. No current prototype is described as having achieved that standard.
+Dreadmarch is now an original dark-fantasy, offline single-player action RPG and the first consumer of a reusable Rust engine. **Original Divine Divinity (2002), the complete Diablo series, Diablo IV, Lost Ark, Path of Exile, and Path of Exile II are explicit creative and quality inspirations.** Their names describe the intended standard of combat, atmosphere, encounters and systems. The project intends to match and surpass those benchmarks through original execution. No current prototype is described as having achieved that standard.
 
 The combination is deliberate: commander-level action and character expression inside battles that also reward squad control, positioning and strategic decisions. The engine must remain usable for other games with different content and rules.
 
@@ -40,7 +40,7 @@ These are verified upstream versions, not a claim that every candidate has been 
 
 | Project | Actual implementation and provenance | Fit and current disposition |
 | --- | --- | --- |
-| [D2Gamma](https://github.com/Nugwa628/d2gamma) | Rust/Bevy Diablo II: Lord of Destruction reimplementation; MIT; author labels it early beta. Manifest pins Bevy `=0.19.1` and MSRV 1.95. | Highest-priority Diablo-specific architecture and subsystem candidate. Audit isolated code before importing. Its Diablo data and behavior assumptions are not the foundation of an original RTS. |
+| [D2Gamma](https://github.com/Nugwa628/d2gamma) | Rust/Bevy Diablo II: Lord of Destruction reimplementation; MIT; author labels it early beta. Manifest pins Bevy `=0.19.1` and MSRV 1.95. | Highest-priority Diablo-specific architecture and subsystem candidate. Audit isolated code before importing. Its Diablo-specific data and behavior assumptions need an explicit adapter and do not define Dreadmarch's original world or reusable core. |
 | [ferrets](https://github.com/valeriyr/ferrets) | Rust RTS engine; MIT OR Apache-2.0. Fixed-point simulation, pathfinding, lockstep and replay facilities. Root manifest currently uses Bevy 0.18. | Highest-priority navigation and determinism challenger. Several leaf crates have no Bevy dependency and can be evaluated separately. See bounded audit below. |
 | [Digital Extinction](https://github.com/DigitalExtinction/Game) | Rust/Bevy 3D RTS. Code AGPL-3.0; assets generally CC BY-SA 4.0 with per-directory exceptions. Archived 2026-02-17; README identifies early development. | Historical reference for RTS controls, architecture and multiplayer packaging. Not selected as a maintained engine foundation. Any code or asset integration needs its own recorded license disposition. |
 | [Oxidator](https://github.com/Ruddle/oxidator) | MIT Rust/WebGPU RTS game/engine. README shows a 35,000-unit demonstration and names large-scale RTS influences. | Reference for army-scale experiments. The demonstration is an upstream claim, not a Dreadmarch benchmark or a verified current-hardware result. |
@@ -75,6 +75,8 @@ The manifests and math files were read in full; navigation implementation inspec
 The next comparison must include narrow passages, disconnected goals, differing unit sizes, diagonal walls, dynamic obstruction and large formation orders. Compare path validity, full-group completion, deterministic hashes, memory and time against the current implementation using identical requests. Preserve notices and pin a full upstream commit before integration. Never describe an unrun comparison as an optimization.
 
 The math crate can be evaluated without renderer migration. A switch from an existing integer-coordinate format must specify scale, range, rounding, overflow and save migration. Using Rust or fixed-point types alone does not establish deterministic simulation.
+
+The initial engine comparison below retains its 24 November 2026 snapshot. The expanded RPG research is in [Diablo](research/DIABLO_CLASS_ATLAS.md), [Divinity](research/DIVINITY_ATLAS.md), and [Lost Ark / Path of Exile](research/ARPG_SYSTEMS.md).
 
 ## Bounded D2Gamma architecture audit
 

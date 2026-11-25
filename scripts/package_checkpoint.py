@@ -27,13 +27,18 @@ for name in ['Dreadmarch-campaign.html', 'Dreadmarch-playtest.html']:
     if not browser.is_file():
         raise SystemExit('Build both browser modes with scripts/build_web.py first.')
     files.append((browser,'play/'+name))
-for name in ['web-build.json','core-tests.txt','native-smoke.png','native-smoke-receipt.json',
-             'verification.json','spatial-benchmark.json','battle-smoke.json','extracted-native-receipt.json',
-             'browser-live-receipt.json', 'campaign-build.json', 'rpg-abi-proof.json',
+# Only current RPG evidence belongs in this checkpoint. Alpha.1 receipts remain
+# documented by docs/HISTORY_ALPHA1.md and its published release; they must not
+# appear to validate newly built campaign binaries.
+for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
              'rpg-controls-proof.json', 'rpg-browser-live-receipt.json', 'rpg-rust-tests.log',
-             'rpg-verification.json', 'native-campaign-smoke.png', 'native-campaign-smoke-creator.png',
+             'rpg-verification.json', 'rpg-extracted-native-receipt.json',
+             'native-rts-regression.png', 'native-rts-regression.log', 'native-clippy.log',
+             'native-campaign-smoke.png', 'native-campaign-smoke-creator.png',
              'native-campaign-smoke.log', 'native-campaign-receipt.json',
-             'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg', 'dreadmarch-skills-live.jpg', 'research-validation.json']:
+             'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg',
+             'dreadmarch-skills-live.jpg', 'dreadmarch-completed-journal.jpg',
+             'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 if args.native:

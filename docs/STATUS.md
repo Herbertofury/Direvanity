@@ -2,59 +2,96 @@
 
 Dreadmarch · https://github.com/Herbertofury/Dreadmarch · 25 November 2026 (America/Denver)
 
-## Current direction
+## Current direction and scope
 
-A character-led, offline, single-player action RPG is now the primary game. Original Divine Divinity
+A character-led, offline, single-player action RPG is the primary game. Original Divine Divinity
 (2002), the complete Diablo series, Lost Ark, Path of Exile and Path of Exile II are explicit inspirations.
-The first RTS encounter remains an optional regression scenario. See [RPG_DIRECTION.md](RPG_DIRECTION.md).
+The earlier RTS encounter remains an optional regression scenario. See [RPG_DIRECTION.md](RPG_DIRECTION.md).
 
-## Verified in the current working implementation
+The delivered content is a playable procedural prologue and reusable engine foundation. A massive
+finished campaign, production character art, all researched mechanics implemented, and demonstrated
+AAAA quality remain production goals. [CLASS_SYNTHESIS.md](CLASS_SYNTHESIS.md) states the simplified
+prototype behaviors and the contracts needed to replace them with full class combat systems.
 
-- All 19 distinct researched Diablo class identities have creator choices and original adaptation trees.
-- 174 original nodes across the class catalogue: 3 branches per class, 4 for Spiritborn. These are a
-  prototype design, separate from the thousands of inventoried source-game abilities and tree records.
+## Implemented
+
+- All 19 distinct researched Diablo class identities in both creators, with independent body choices.
+- 174 original prototype nodes across 58 branches: three branches per class, four for Spiritborn.
 - Persistent name, silhouette, six hair styles, skin/hair/eye/cloth colors and stature.
-- Shared Rust campaign rules: skill learning, prerequisites, cooldowns, focus, 11 effect families,
-  XP/levels, equipment, loot, dialogue, main/side quest state and persistent region travel.
-- Three connected regions: Hearthmere, Hollow Moor and Forgotten Sanctum. A complete prologue loop.
-- Every class completed both quests through the public WASM command interface, using actual combat,
-  movement and interactions: 19 playthroughs and 52,530 simulated ticks. No stat/world edits were used.
-- Persistent killed enemies and uncollected loot; reward uniqueness; byte-exact full save roundtrips.
-- 16 simulation tests pass, including stored-region path/map corruption rejection. Targeted strict
-  Clippy passes. Core, WASM and independent engine tests passed earlier in this implementation wave.
-- 16 packaged campaign control checks pass against actual JS and embedded Rust WASM with structural
-  DOM/Canvas mocks. They cover creator, appearance, movement, panels, skills, independent save slots,
-  resume/import, hidden-tab pause, modal transition integrity and defeated-save recovery. These mocks do not establish actual browser visual quality.
-- Legacy WASM and all 20 legacy packaged control regressions still pass.
+- Shared Rust campaign rules: prerequisites, skill learning, cooldowns, focus, 11 effect families,
+  XP/levels, equipment, loot, dialogue, main/side quests and persistent region travel.
+- Hearthmere, Hollow Moor and Forgotten Sanctum form a complete main-quest and side-quest prologue.
+- Persistent defeated enemies and uncollected loot, one-time rewards and portable exact JSON saves.
+- Native Bevy creator, campaign UI, movement, casting, learning, interaction, inventory and save/load.
+- Browser character slots, save/resume, import/export, contained panels and hidden-tab pause.
 
-## Additional observed verification
+## Source and automated verification
 
-- Native creator/campaign source compiled successfully; all four native regressions passed, including
-  creator button selection, independent appearance, real skill learning and portable campaign saves.
-- The live browser campaign was visually inspected and exercised through actual controls: customization,
-  Witch Doctor selection, movement, accepting the main quest, learning Spirit Harvest/Wicker Companion,
-  save, retraining and restoration. A second Paladin slot preserved the first character and its progress.
-- Initial cross-platform CI run `45653298115` passed all jobs on source `718fcf8`; Pages deployment
-  `45653476481` passed. The later review fixes and native integration require their own final release gate.
-- Source checkpoint `4978a61` publishes all three research datasets and atlases. Uploaded Git blob hashes
-  matched the complete local files. Divinity contains 1,684 typed records; other exact counts are in
-  their atlases. No missing-denominator or current-build uncertainty is silently marked complete.
-- Challenge fixes preflight item and encounter identity allocation, saturate currency rewards, validate
-  stored-region navigation, and reset/contain modals across load/creator transitions.
+The Rust/native source checkpoint is
+[`a96d473d834dac66b0c0f0977300ed6dca45899e`](https://github.com/Herbertofury/Dreadmarch/commit/a96d473d834dac66b0c0f0977300ed6dca45899e).
+[CI run 45657960569](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657960569) passed every job.
+Later documentation, checkpoint packaging and a browser objective-text correction do not change the Rust/native source.
 
-## Work underway before this checkpoint is a release
+| Gate | Observed result |
+| --- | --- |
+| Core, simulation, WASM and independent consumer tests | 27 passed |
+| Native regression tests | 4 passed on Linux and Windows |
+| Format and strict Clippy | Passed, including all native targets |
+| Complete campaign through every class | 19 real public-command playthroughs; 52,530 simulated ticks; both quests completed |
+| Packaged campaign controls | 16 checks passed with actual JS/WASM and structural DOM/Canvas mocks |
+| Legacy packaged controls | 20 checks passed; legacy WASM integration also passed |
+| Legacy full battle, replay/save, independent engine consumer | Passed in final-source CI |
 
-- Current-source native campaign/creator render verification and optimized release packages.
-- Final exact-source cross-platform CI after review fixes.
-- Final modal-focus browser regression after deployment of the hardened client.
-- Current-source cross-platform CI, release packaging and complete artifact readback.
+Campaign checks exercise real movement/combat/interaction, prerequisites, reward uniqueness,
+equipment, persistent enemies/loot, exact cross-instance save restoration and invalid-save atomicity.
+The challenge pass fixed item/unit allocation exhaustion before reward/travel mutations, currency
+overflow, stored-region navigation validation, modal transitions, native movement throttling after
+clock rollback, defeated-save camera initialization and presentation scheduling after travel.
+
+## Actual runtime and visual evidence
+
+- Native campaign: 184 frames, 10 command checks, exact save roundtrip and validated HUD; checksum
+  `b31fcf2df3844452`. Creator, class choice, quest, cache/equipment, skill and travel were exercised.
+- Native legacy tactical mode: 120 frames, three command checks, exact save roundtrip and validated
+  HUD; checksum `4d08544a95f6c631`. The receipt records the success marker without inventing a lost
+  final process-exit response.
+- Native captures are 1440 × 900 and were visually reviewed. Current proof is in
+  `native-campaign-receipt.json`, `native-campaign-smoke.log`, `native-rts-regression.log` and their PNGs.
+- The native environment used Vulkan through Mesa Lavapipe. This proves functional rendering and
+  command/UI behavior; it does not establish performance on a gaming GPU or a real Windows window.
+- A complete live browser Witch Doctor playthrough reached level 6, defeated all ten region enemies,
+  completed both quests, earned both unique rewards and returned to Hearthmere. Movement, companion
+  casting, learning, loot/equipment, region persistence and quest turn-ins used actual controls. The
+  exported save and `rpg-live-playthrough.json` preserve this evidence. Earlier review also verified
+  customization, retraining, save restoration and independent Paladin/Witch Doctor slots.
+- [Pages run 45657139297](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657139297) deployed
+  source `1558e58`. Browser source is unchanged in `a96d473`; live review verified modal focus
+  wrapping, inert background, Escape focus restoration, prior pause preservation and creator/resume.
+  The subsequent text-only correction removes a stale instruction to finish Iven after both quests
+  are complete; packaged campaign controls still pass.
+- Structural DOM/Canvas tests establish control behavior, not visual quality. Actual browser review
+  and native rendered captures are recorded separately.
+
+## Research provenance and coverage
+
+All three complete JSON catalogues and readable atlases are published. File SHA-256 values and Git
+blob identities are recorded in `research-validation.json`. Exact counts, edition boundaries and
+unknown denominators remain visible in each atlas. Divinity contains 1,684 typed edition-specific
+records. Research entries are not counted as implemented Dreadmarch abilities.
+
+## Release and complete artifact
+
+Release build run [45657992875](https://github.com/Herbertofury/Dreadmarch/actions/runs/45657992875)
+is producing optimized Windows/Linux packages from `a96d473`. Exact package verification, publication
+and complete archive readback are the remaining distribution steps for this checkpoint.
 
 ## Production work remains
 
-This is a playable procedural prologue and engine foundation. It is not a massive finished campaign,
-finished production art, all source abilities implemented, or demonstrated AAAA quality. Rigged original
-characters, faces, authored animation, world art, audio, boss design, advanced itemization, dialogue
-choices, controller/direct movement, accessibility and the extensive campaign remain roadmap work.
+Original rigged characters, faces, authored animation, world art, audio, boss design, differentiated
+class resources, real projectile/chain delivery, advanced itemization, branching dialogue, controller
+support, accessibility and the extensive campaign remain roadmap work. Native WASD/click movement
+is implemented; production controller and rebinding support is not yet complete.
 
-The previous release's evidence is preserved in [HISTORY_ALPHA1.md](HISTORY_ALPHA1.md). Older native
-binaries must not be described as containing the new RPG implementation.
+The earlier milestone's evidence is preserved in [HISTORY_ALPHA1.md](HISTORY_ALPHA1.md). Alpha.1 native
+binaries do not contain this RPG implementation. Dependency notices retain the two disclosed upstream
+text exceptions in [THIRD_PARTY.md](../THIRD_PARTY.md); the notice bundle does not claim those resolved.

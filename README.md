@@ -90,6 +90,31 @@ The browser uses Canvas2D for an accessible simulation playtest; Bevy is the nat
 Panels pause the world and preserve the previous pause state. Hidden tabs pause explicitly. Saves are
 opaque UTF-8 from Rust; clients do not round-trip the 64-bit RNG through JavaScript Number.
 
+### Native campaign controls
+
+Launch `dreadmarch` (or `dreadmarch.exe`) to open the creator. Class and appearance buttons edit the
+preview. Use **EDIT NAME**, type, and press Enter; Enter outside the name field begins the journey.
+
+| Action | Control |
+| --- | --- |
+| Move | WASD relative to the camera, or click ground |
+| Cast selected skill / cast a learned active | Space at cursor / 1–6 in tree order |
+| Arm a targeted cast | Cast button, then click ground |
+| Interact with nearest person, loot, cache or road | J |
+| Skills / inventory | K / I |
+| Previous / next skill or inventory item | [ / ] |
+| Learn / equip / free town retraining | L / U / T |
+| Orbit / zoom / center hero | Q and E / wheel / C |
+| Pause / restart current character | P / R |
+| Creator / save / load | F2 / F5 / F9 |
+| Help / screenshot | F1 / F12 |
+| Close panel or creator; then exit | Escape |
+
+The default campaign save is `dreadmarch-campaign.json`. Use `--save PATH` for a separate character
+file or `--load PATH` to import a validated shared JSON save. `--class ID --name NAME` initializes an
+editable creator draft; `--skirmish` launches the earlier tactical encounter. Browser multi-character
+slots and native save-file paths are separate interfaces to the same portable save format.
+
 ## Reusable engine
 
 | Package | Responsibility |

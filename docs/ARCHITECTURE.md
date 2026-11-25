@@ -5,8 +5,8 @@
 | Package | Owns | Must not own |
 | --- | --- | --- |
 | dread-core | Integer world coordinates, generic grid navigation and spatial indexing | Dreadmarch classes, graphics, browser state |
-| dread-sim | Game rules, unit state, combat, objectives, economy, commands, saves | Camera, UI, frame rate, nondeterministic wall-clock decisions |
-| dreadmarch-client | Bevy3D presentation, input mapping, selection, camera and HUD | An independent combat/navigation implementation |
+| dread-sim | Campaign/character/quest/item rules, unit state, combat, optional skirmish objectives, commands, saves | Camera, UI, frame rate, nondeterministic wall-clock decisions |
+| dreadmarch-client | Bevy 3D presentation, character creator, campaign UI, input mapping, targeting, camera and HUD | An independent combat/navigation implementation |
 | dread-wasm | Thin C ABI and JSON boundary over the same Rust simulation | JavaScript gameplay rules |
 | dread-headless | Replays, deterministic verification and CPU timing | GPU/FPS claims |
 | engine-lab | Independent consumer of the generic navigation API | Imports from dread-sim |
@@ -35,8 +35,8 @@ asset cooking, visual authoring, networking and modular content remain roadmap w
 
 ## Rendering progression
 
-Start with a stable raster path and original procedural geometry to prove camera, selection,
-animation timing and battlefield readability. Upgrade to authored PBR assets, layered animation,
+Start with a stable raster path and original procedural geometry to prove camera, targeting,
+animation timing and encounter readability. Upgrade to authored PBR assets, layered animation,
 particles, terrain and lighting in reviewable increments. Compare advanced GPU pipelines on the
 same scene and hardware. Never treat “latest” as a benchmark result.
 
