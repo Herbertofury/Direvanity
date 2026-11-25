@@ -1,0 +1,98 @@
+name: Publish portable Linux package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing prerelease to receive the portable Linux package
+        required: true
+        default: v0.1.0-alpha.1
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: 3
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build on the explicit glibc baseline
+        run: cargo build --locked --release -p dreadmarch-client
+      - name: Include dependency and font notices
+        run: |
+          cargo fetch --locked
+          python3 scripts/collect_notices.py --allow-incomplete
+      - name: Run the optimized renderer and gameplay smoke
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers
+          mkdir -p dist
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          export WGPU_BACKEND=vulkan
+          export LP_NUM_THREADS=2
+          set -o pipefail
+          target/release/dreadmarch --smoke-test --screenshot dist/native-smoke.png | tee dist/portable-native-smoke.log
+      - name: Enforce ABI ceiling and package the exact binary
+        shell: python
+        run: |
+          import hashlib, json, pathlib, re, shutil, subprocess, zipfile
+          binary = pathlib.Path('target/release/dreadmarch')
+          symbols = subprocess.check_output(['objdump','-T',str(binary)], text=True)
+          versions = {tuple(map(int, v.split('.'))) for v in re.findall(r'GLIBC_([0-9.]+)', symbols)}
+          required = max(versions)
+          assert required <= (2,39), f'glibc requirement exceeded: {required}'
+          out = pathlib.Path('dist')
+          name = 'Dreadmarch-linux-x64'
+          stage = out/name
+          stage.mkdir(exist_ok=True)
+          for path in [binary,pathlib.Path('README.md'),pathlib.Path('LICENSE-MIT'),pathlib.Path('LICENSE-APACHE'),pathlib.Path('THIRD_PARTY.md'),out/'THIRD_PARTY_NOTICES.txt']:
+              shutil.copy2(path,stage/path.name)
+          shutil.copytree('docs',stage/'docs',dirs_exist_ok=True)
+          package = out/(name+'.zip')
+          with zipfile.ZipFile(package,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for path in sorted(stage.rglob('*')):
+                  if path.is_file(): z.write(path,name+'/'+path.relative_to(stage).as_posix())
+          with zipfile.ZipFile(package) as z:
+              assert z.testzip() is None
+              assert z.read(name+'/dreadmarch') == binary.read_bytes()
+              assert (z.getinfo(name+'/dreadmarch').external_attr >> 16) & 0o111
+          digest = hashlib.sha256(package.read_bytes()).hexdigest()
+          (out/(name+'.sha256')).write_text(digest+'  '+package.name+'\n',encoding='utf-8')
+          receipt = {'schema':1,'build_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'runner':'ubuntu-24.04','required_glibc':'.'.join(map(str,required)),
+              'binary_sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),
+              'package_sha256':digest,'binary_bytes':binary.stat().st_size,
+              'smoke_result':next(line for line in (out/'portable-native-smoke.log').read_text().splitlines() if 'DREADMARCH_RENDER_SMOKE_OK' in line)}
+          (out/'portable-linux-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(receipt,indent=2))
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: portable-linux-x64
+          path: |
+            dist/*.zip
+            dist/*.sha256
+            dist/portable-linux-receipt.json
+            dist/native-smoke.png
+          if-no-files-found: error
+  publish:
+    needs: linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: portable-linux-x64
+          path: dist
+      - name: Publish verified portable package
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+          gh release upload "$RELEASE_TAG" dist/Dreadmarch-linux-x64.zip dist/Dreadmarch-linux-x64.sha256 dist/portable-linux-receipt.json dist/native-smoke.png --clobber --repo "$GITHUB_REPOSITORY"
