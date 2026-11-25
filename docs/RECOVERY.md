@@ -71,4 +71,60 @@ The package prefix is reproducible build-runner material and does not belong in 
 
 Reassess this route if the base OS, architecture, Mesa/LLVM linkage, Vulkan loader or socket capability changes. Do not assume that a different runner shares the X11 restriction.
 
-The next acceptance action is a finite native offscreen game run using this environment, followed by screenshot inspection and verification of the game simulation's smoke result. Provisioning and device enumeration are complete; game rendering proof is a separate gate.
+The finite native offscreen game gate is now complete. Both the development executable and the
+freshly extracted optimized portable Linux artifact rendered the scene and complete HUD, captured
+a 1440 × 900 PNG, and passed the 120-frame gameplay/save smoke. Reuse the scoped environment for
+future rendering regressions rather than repeating provisioning. The next implementation work is
+M1 combat and navigation, with Windows target-hardware capture still outstanding.
+
+## Portable Linux release baseline
+
+Recorded 2026-11-25 UTC. The first optimized Linux build used `ubuntu-latest`. Its CI renderer smoke
+passed, but the downloaded executable failed on the Debian 13 validation host before initialization
+with `GLIBC_2.43 not found`. Host glibc is 2.41. The rejected executable's SHA-256 is
+`65f2f9bc52af4e8082268018d40b7cbfd886484166568df29cbb0866296db4c0`.
+
+The correction pins the Linux release builder to **Ubuntu 24.04** and inspects ELF versioned symbols
+during packaging. The package gate rejects a maximum glibc requirement above **2.39**. This keeps
+the release's build baseline explicit; passing a renderer test on the build runner alone is not
+sufficient portability evidence.
+
+Portable workflow run `45567826892`, job `139046854131`, artifact `15001077210` built source
+`93c51dc4ede21580c7bc90ba92d98b48cb282844`. Verification downloaded the artifact through GitHub,
+matched its provider digest, validated the inner ZIP's bundled SHA and CRC, extracted it into a
+fresh directory, checked its executable mode, and independently inspected the extracted executable.
+The actual glibc requirement is **2.35**. No local rebuild replaced the downloaded executable.
+
+The new binary SHA-256 is `c89dd59542129e18efef6423e09e655afa9862723deb5510734ff28c0fba5465`.
+It completed the following command under the scoped environment, with exit code 0:
+
+```bash
+source /workspace/scratch/f01d9d0c81e4/system-packages/env.sh
+/workspace/scratch/f01d9d0c81e4/Dreadmarch/dist/portable-verified/extracted/Dreadmarch-linux-x64/dreadmarch \
+  --smoke-test \
+  --screenshot /workspace/scratch/f01d9d0c81e4/Dreadmarch/dist/portable-verified/native-smoke.png
+```
+
+```text
+DREADMARCH_RENDER_SMOKE_OK frames=120 tick=120 units=12 checksum=4d08544a95f6c631 screenshot_captured=true commands_ok=3 save_roundtrip=true hud_validated=true
+```
+
+The new screenshot was visually inspected. Exact hashes, paths, CI provenance, host details and
+verification limits are recorded in `dist/portable-verified/receipt.json`; the accompanying log and
+PNG are in the same directory. [STATUS.md](STATUS.md#native-release-evidence) retains the key public
+evidence. Do not reuse the rejected Ubuntu-latest executable or count its CI-only smoke as the
+portable artifact result.
+
+## Windows runtime dependency
+
+The optimized Windows x64 package contains a 76,246,528-byte executable built from
+`780eec867be4bfd1b910cfb11f091c0475e73ce8`, SHA-256
+`81894e9ff5549508f405975a7ea6d7b0977dcaef26b65dd6fcdf36c2db239470`. Its PE imports include
+`VCRUNTIME140.dll`. If Windows reports that DLL missing, install the
+[official Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe), then launch
+the game again. Consult [Microsoft's supported-runtime guide](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/)
+for the current runtime requirements. No Microsoft runtime DLLs are bundled with the game.
+
+Windows CI passed the native build, strict Clippy and three regression tests. These are distinct
+from running the game through a Windows graphics driver; Windows GPU runtime and interactive
+windowed-input verification remain part of M1's hardware capture work.

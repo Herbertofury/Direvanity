@@ -34,6 +34,17 @@ Download a published playtest from [Releases](https://github.com/Herbertofury/Dr
 `Dreadmarch-playtest.html` is a single offline file: download it and open it in a modern browser.
 Windows native packages contain `dreadmarch.exe`. The program requires no proprietary game assets.
 
+For Windows, install the [Microsoft Visual C++ x64 Redistributable](https://aka.ms/vc14/vc_redist.x64.exe)
+if the program reports a missing `VCRUNTIME140.dll`. Microsoft documents the supported runtime in
+its [Visual C++ Redistributable guide](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/).
+The Windows executable has passed cross-platform build, lint and native regression gates; Windows
+GPU runtime and target-hardware frame times remain to be verified.
+
+The portable Linux x64 release was built on Ubuntu 24.04. Its executable requires glibc **2.35 or
+newer**, plus the normal X11 and graphics-driver runtime libraries. The exact downloaded release
+artifact passed a fresh extraction and 120-frame offscreen Vulkan/gameplay smoke on Debian 13.
+See [the release evidence](docs/STATUS.md#native-release-evidence) for hashes and verification limits.
+
 To build from source, install the [official Rust toolchain](https://rustup.rs/) and the normal C/C++
 linker for your platform. Windows uses Visual Studio Build Tools with Desktop development with C++.
 The repository pins Rust **1.100.0** and provides `Cargo.lock`.
@@ -112,6 +123,10 @@ commands, checks save/load and captures the scene. A software Vulkan driver is s
 functional QA. Its timing is not an RTX 4090 performance result.
 
 ## Where this goes
+
+The next implementation milestone is **M1: combat and navigation**: unit footprints, avoidance and
+congestion tests, a data-driven ability and status model, and authored combat animation and encounters.
+Windows target-hardware input and frame-time capture is part of that vertical slice.
 
 - [Vision and quality targets](docs/VISION.md)
 - [Production roadmap](docs/ROADMAP.md)
