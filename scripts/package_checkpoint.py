@@ -38,7 +38,8 @@ for name in ['web-build.json', 'campaign-build.json', 'rpg-abi-proof.json',
              'native-campaign-smoke.log', 'native-campaign-receipt.json',
              'dreadmarch-campaign-live.jpg', 'dreadmarch-campaign-live-final.jpg',
              'dreadmarch-skills-live.jpg', 'dreadmarch-completed-journal.jpg',
-             'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json']:
+             'dreadmarch-live-completed-character.json', 'rpg-live-playthrough.json', 'research-validation.json',
+             'release-alpha2/public-release-assets.json', 'release-alpha2/release-job-status.json']:
     path = root/'dist'/name
     if path.is_file(): files.append((path,'verification/'+name))
 # Preserve optimized CI and freshly extracted-package evidence under their

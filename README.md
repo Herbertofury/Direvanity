@@ -3,7 +3,7 @@
 **A massive single-player action RPG in development. A reusable Rust engine beneath it.**
 
 [**Play the campaign**](https://herbertofury.github.io/Dreadmarch/) ·
-[Source and downloads](https://github.com/Herbertofury/Dreadmarch/releases) ·
+[Windows / Linux / offline downloads](https://github.com/Herbertofury/Dreadmarch/releases/tag/v0.1.0-alpha.2) ·
 [Research atlases](docs/research/) · [Production roadmap](docs/ROADMAP.md)
 
 Create a character, choose a class, explore an original dark-fantasy world, meet its people, discover
@@ -30,8 +30,9 @@ destination. The current playable build is a procedural prologue, not a finished
 - Independent browser character slots, exact save/load and portable JSON save export/import.
 - Native Bevy 3D presentation and an offline browser client backed by the **same Rust simulation**.
 
-The native campaign integration and release evidence are tracked in [STATUS.md](docs/STATUS.md).
-Always check the release tag: the older `v0.1.0-alpha.1` binaries contain the earlier RTS encounter.
+The current RPG prerelease is **v0.1.0-alpha.2**, with verified Windows/Linux packages and an offline
+browser build. Exact build, runtime and distribution evidence is in [STATUS.md](docs/STATUS.md).
+The older `v0.1.0-alpha.1` binaries contain the earlier RTS encounter.
 That encounter remains an [optional skirmish](https://herbertofury.github.io/Dreadmarch/skirmish.html)
 and regression fixture. The campaign is now the primary product.
 

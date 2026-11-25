@@ -106,7 +106,20 @@ Distribution package SHA-256 values:
 - Linux: `ba76dcd5f8ad49af9bb1c81b5a705ede3eecd3699860a24365bd028a44969b43`
 - Windows: `60a76ac1aaef2ef6d6010b4a152445647f1346bed44e1ed0ed380524d0c4c7f5`
 
-Publication and the complete archive readback are the remaining distribution steps for this checkpoint.
+The public [v0.1.0-alpha.2 release](https://github.com/Herbertofury/Dreadmarch/releases/tag/v0.1.0-alpha.2)
+was published on 25 November 2026 from tag commit `e4a6e9c971ead55ecc2569fb1d931f33a3522eb6`.
+All 17 initial release assets were read back through GitHub metadata and matched to their local
+byte counts and SHA-256 digests. The exact map is preserved in `public-release-assets.json`.
+
+The complete checkpoint format includes the clean Git source, both offline browser clients, both
+platform packages, all research catalogues and the separate development/CI/extracted runtime proof.
+`CHECKPOINT.json` identifies the source revision and every payload hash, size and permission. A
+separate verifier checks the archive against Git blobs and nested native-package receipts.
+
+Complete-file backup readback remains a mandatory delivery gate. Its observed result and exact
+archive SHA-256 are recorded in the release asset `Dreadmarch-delivery.json`, which is generated
+after the archive is transferred. This post-transfer receipt is intentionally outside the archive
+whose identity it verifies. The final delivery must not claim success without that receipt.
 
 ## Production work remains
 

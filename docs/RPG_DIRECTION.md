@@ -21,7 +21,13 @@ combat references. The campaign must work offline and be completable solo, with 
 - [x] A coherent skill architecture combining related effects without erasing class identities.
 - [x] Playable single-character campaign foundation using the authoritative Rust simulation.
 - [x] A world/campaign/quest/loot roadmap with implemented content separated from production ambition.
-- [ ] Verified build, actual runtime path, public source checkpoint and complete artifact backup.
+- [x] Verified builds, actual runtime paths, public source checkpoint and published RPG packages.
+
+**Complete backup delivery is a required final gate.** The full clean-source checkpoint must pass
+independent payload verification and complete-file download/readback before delivery is considered
+complete. The release asset `Dreadmarch-delivery.json` records that post-transfer result and exact
+archive identity; it is written after the transfer so the archive does not contain a claim about its
+own future upload. See [STATUS.md](STATUS.md).
 
 ## Quality destination
 
